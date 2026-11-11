@@ -3085,12 +3085,63 @@ async function doLogin(){
     }
   }
 
+  // Hàm mở Form nhập lịch hẹn
   function addAppointment() {
-    const p = prompt("Nhập tên bệnh nhân:");
-    if(!p) return;
-    const s = prompt("Dịch vụ (VD: Chụp MRI, X-quang):", "Chụp X-quang");
-    DB.data.appointments.push({ id: uid(), patient: p, service: s, date: localDate(), time: "08:00", status: 'Chờ xác nhận', createdAt: Date.now() });
-    saveDB(); renderOpsCenter(); toast('Đã thêm lịch hẹn');
+    $('#dlg-title').textContent = '📅 Thêm Lịch Hẹn Mới';
+    $('#dlg-body').innerHTML = `
+      <div class="form-group full">
+        <label>Tên Bệnh Nhân *</label>
+        <input type="text" id="app-patient" placeholder="VD: Nguyễn Văn A">
+      </div>
+      <div class="form-group">
+        <label>Ngày hẹn</label>
+        <input type="date" id="app-date" value="${localDate()}">
+      </div>
+      <div class="form-group">
+        <label>Giờ hẹn</label>
+        <input type="time" id="app-time" value="08:00">
+      </div>
+      <div class="form-group full">
+        <label>Dịch vụ / Phương thức</label>
+        <select id="app-service">
+          <option>Chụp X-quang (XQ)</option>
+          <option>Chụp Cắt lớp (CT)</option>
+          <option>Chụp Cộng hưởng từ (MRI)</option>
+          <option>Siêu âm (SA)</option>
+        </select>
+      </div>
+      <div class="form-group full">
+        <label>Ghi chú thêm</label>
+        <textarea id="app-note" rows="2" placeholder="VD: Bé cần nhịn ăn, có tiền sử dị ứng..."></textarea>
+      </div>
+    `;
+    $('#dlg-foot').innerHTML = `
+      <button type="button" class="btn-soft" onclick="closeDlg()">Hủy</button>
+      <button type="button" class="btn" onclick="saveAppointment()">💾 Lưu Lịch Hẹn</button>
+    `;
+    $('#dlg').showModal();
+  }
+
+  // Hàm lưu dữ liệu từ Form
+  function saveAppointment() {
+    const patient = $('#app-patient').value.trim();
+    if (!patient) { toast('Vui lòng nhập tên bệnh nhân'); return; }
+    
+    DB.data.appointments.push({
+      id: uid(),
+      patient: patient,
+      date: $('#app-date').value,
+      time: $('#app-time').value,
+      service: $('#app-service').value,
+      note: $('#app-note').value.trim(),
+      status: 'Chờ xác nhận',
+      createdAt: Date.now()
+    });
+    
+    saveDB();
+    closeDlg();
+    renderOpsCenter();
+    toast('Đã lưu lịch hẹn thành công');
   }
 
   function addTask(status) {
