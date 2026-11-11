@@ -214,6 +214,7 @@ const SCHEMA={
     approval_hub: {g:'K', n:'Trung Tâm Phê Duyệt', icon:'✅', view:'approval_hub'},
     ops_center: {g:'K', n:'Trung Tâm Vận Hành', icon:'🚀', view:'ops_center'},
   // ---- A. DASHBOARD (7) ----
+    my_workspace: {g:'A', n:'Góc Làm Việc', icon:'🏠', view:'my_workspace'},
   dash_executive:{g:'A',n:'Dashboard Lãnh đạo',icon:'📊',view:'dashboard'},
   dash_clinical:{g:'A',n:'Dashboard Chuyên môn',icon:'🩺',view:'dashboard'},
   dash_hr:{g:'A',n:'Dashboard Nhân sự',icon:'👥',view:'dashboard'},
@@ -957,6 +958,7 @@ function route(k){
   else if(m.view==='settings')renderSettings();
   else if(m.view==='monthly_report')renderMonthlyReportView();
   else if(m.view==='calendar')       renderCalendar();
+      else if(m.view==='my_workspace')   renderMyWorkspace();
       else if(m.view==='approval_hub')   renderApprovalHub();
       else if(m.view==='ops_center') renderOpsCenter();
   else if(m.view==='cases')          renderCases();
@@ -3468,6 +3470,101 @@ async function doLogin(){
     }
   }
 </script>
-<!-- KẾT THÚC TRUNG TÂM PHÊ DUYỆT -->
+<!-- ================================================== -->
+<!-- MODULE: GÓC LÀM VIỆC CÁ NHÂN (MY WORKSPACE)        -->
+<!-- ================================================== -->
+<script>
+  function renderMyWorkspace() {
+    if(!CURRENT) return;
+
+    // 1. Lấy dữ liệu cá nhân
+    const myName = CURRENT.name || CURRENT.username;
+    const myCode = CURRENT.username;
+    
+    // Lấy số dư phép (Mặc định 12 nếu chưa có)
+    if(!DB.data.leave_balances) DB.data.leave_balances = {};
+    if(DB.data.leave_balances[myCode] === undefined) DB.data.leave_balances[myCode] = 12;
+    const myBalance = DB.data.leave_balances[myCode];
+
+    // Lấy đơn nghỉ phép của cá nhân
+    const myLeaves = (DB.data.leave_requests || [])
+      .filter(x => !x._deleted && (x.empCode === myCode || x.empName === myName))
+      .reverse().slice(0, 5); // Chỉ lấy 5 đơn gần nhất
+
+    const today = new Date();
+    const dateStr = today.toLocaleDateString('vi-VN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+    // 2. Vẽ giao diện
+    let html = `
+      <div class="page-head">
+        <div>
+          <h1>🏠 Góc Làm Việc Của Tôi</h1>
+          <div class="subtitle" style="text-transform: capitalize;">${dateStr}</div>
+        </div>
+      </div>
+
+      <!-- Thẻ thông tin nhanh -->
+      <div class="tiles" style="grid-template-columns: repeat(3, 1fr); margin-bottom: 20px;">
+        <div class="tile" style="background: linear-gradient(135deg, #e0f2fe, #bae6fd); border: none;">
+          <small style="color: #0369a1;">Xin chào,</small>
+          <strong style="color: #0284c7; font-size: 20px; margin-top: 5px;">${esc(myName)}</strong>
+          <div class="sub" style="color: #0369a1;">Chúc bạn một ngày làm việc hiệu quả!</div>
+        </div>
+        
+        <div class="tile">
+          <small>Số dư phép năm</small>
+          <strong style="color: var(--good); font-size: 28px;">${myBalance} <span style="font-size:14px; color:var(--muted); font-weight:normal;">ngày</span></strong>
+          <div class="sub">Cập nhật tự động</div>
+        </div>
+
+        <div class="tile" style="display:flex; flex-direction:column; justify-content:center; align-items:center;">
+          <button class="btn" onclick="route('leave_requests'); setTimeout(()=>openForm('leave_requests', null), 100);" style="width:100%;">
+            + Tạo Đơn Nghỉ Phép
+          </button>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px;">
+        <!-- Bảng đơn nghỉ phép gần đây -->
+        <div class="card" style="margin-bottom: 0;">
+          <h3>Đơn xin nghỉ gần đây của tôi</h3>
+          <div class="table-wrap" style="margin-top: 10px;">
+            <table>
+              <thead>
+                <tr><th>Loại nghỉ</th><th>Từ ngày</th><th>Đến ngày</th><th>Trạng thái</th></tr>
+              </thead>
+              <tbody>
+                ${myLeaves.length > 0 ? myLeaves.map(l => {
+                  const statusColor = l.status === 'Đã duyệt' ? 'good' : l.status === 'Từ chối' ? 'bad' : 'warn';
+                  return `
+                    <tr>
+                      <td><span class="badge info">${esc(l.type)}</span></td>
+                      <td>${fmtDate(l.startDate)}</td>
+                      <td>${fmtDate(l.endDate)}</td>
+                      <td><span class="badge ${statusColor}">${esc(l.status)}</span></td>
+                    </tr>
+                  `;
+                }).join('') : '<tr><td colspan="4" class="empty">Bạn chưa có đơn nghỉ phép nào.</td></tr>'}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Cột phím tắt / thông báo -->
+        <div class="card" style="margin-bottom: 0; background: var(--panel2);">
+          <h3>Phím tắt nhanh</h3>
+          <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 10px;">
+            <button class="btn-soft" style="text-align:left; padding: 12px;" onclick="route('duty_month')">📆 Xem lịch trực tháng</button>
+            <button class="btn-soft" style="text-align:left; padding: 12px;" onclick="route('roster_doctor')">🩺 Lịch làm việc tuần</button>
+            <button class="btn-soft" style="text-align:left; padding: 12px;" onclick="route('staff')">👤 Hồ sơ nhân sự</button>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    $('#view').innerHTML = html;
+  }
+</script>
+<!-- KẾT THÚC GÓC LÀM VIỆC -->
 </body>
 </html>
