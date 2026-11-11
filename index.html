@@ -222,6 +222,7 @@ const SCHEMA={
   dash_training:{g:'A',n:'Dashboard Đào tạo',icon:'🎓',view:'dashboard'},
   
   // ---- B. NHÂN SỰ (16) ----
+    leave: {g:'B', n:'Đơn Nghỉ Phép', icon:'🌴', view:'leave'},
   staff:{g:'B',n:'Nhân sự',icon:'👤',f:[
     {k:'empCode',l:'Mã NV',t:'text',r:1},{k:'fullName',l:'Họ tên',t:'text',r:1},
     {k:'title',l:'Chức danh',t:'select',o:['BS','BSPK','KTV','ĐD','NV']},
@@ -3245,5 +3246,183 @@ async function doLogin(){
     saveDB(); renderOpsCenter(); toast('Đã nhận tin nhắn');
   }
 </script>
+  <!-- ================================================== -->
+<!-- MODULE: QUẢN LÝ NGHỈ PHÉP (LEAVE MANAGEMENT) -->
+<!-- ================================================== -->
+<script>
+  // 1. Hàm tính số dư phép (Mặc định 12 ngày/năm)
+  function getLeaveBalance(empCode) {
+    if(!DB.data.leave_balances) DB.data.leave_balances = {};
+    // Nếu nhân viên chưa có trong sổ, tự động cấp 12 ngày
+    if(DB.data.leave_balances[empCode] === undefined) {
+      DB.data.leave_balances[empCode] = 20;
+    }
+    return DB.data.leave_balances[empCode];
+  }
+
+  // 2. Hàm vẽ giao diện chính
+  function renderLeaveModule() {
+    if(!can('leave', 'r')) { $('#view').innerHTML = '<div class="empty">Bạn không có quyền.</div>'; return; }
+    
+    if(!DB.data.leave_requests) DB.data.leave_requests = [];
+    const leaves = DB.data.leave_requests.filter(x => !x._deleted).reverse();
+    
+    const isManager = CURRENT.role === 'admin' || CURRENT.role === 'doctor';
+    const myBalance = getLeaveBalance(CURRENT.username); // Lấy số dư của người đang đăng nhập
+
+    let rows = leaves.map(l => {
+      const statusColor = l.status === 'Đã duyệt' ? 'good' : l.status === 'Từ chối' ? 'bad' : 'warn';
+      let actionBtns = '';
+      if (l.status === 'Chờ duyệt' && isManager) {
+        actionBtns = `
+          <button class="btn-soft btn-sm" style="color:var(--good); border-color:var(--good)" onclick="updateLeaveStatus('${l.id}', 'Đã duyệt')">✓ Duyệt</button>
+          <button class="btn-soft btn-sm" style="color:var(--bad); border-color:var(--bad)" onclick="updateLeaveStatus('${l.id}', 'Từ chối')">✕ Từ chối</button>
+        `;
+      } else {
+        actionBtns = `<span style="font-size:11px; color:var(--muted)">${l.approvedBy ? 'Duyệt: '+l.approvedBy : ''}</span>`;
+      }
+      return `
+        <tr>
+          <td><b>${esc(l.empName)}</b></td>
+          <td><span class="badge info">${esc(l.type)}</span></td>
+          <td>${esc(l.startDate)} <br><span style="color:var(--muted); font-size:11px">đến</span><br> ${esc(l.endDate)}</td>
+          <td style="max-width:200px; white-space:normal;">${esc(l.reason)}</td>
+          <td><span class="badge ${statusColor}">${esc(l.status)}</span></td>
+          <td>${actionBtns}</td>
+        </tr>
+      `;
+    }).join('');
+
+    let html = `
+      <div class="page-head">
+        <div>
+          <h1>🌴 Quản Lý Đơn Nghỉ Phép</h1>
+          <div class="subtitle" style="color:var(--accent); font-weight:bold; font-size:14px; margin-top:5px;">
+            Số dư phép của bạn: ${myBalance} ngày
+          </div>
+        </div>
+        <button class="btn" onclick="openLeaveForm()">+ Tạo Đơn Nghỉ</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Nhân viên</th><th>Loại nghỉ</th><th>Thời gian</th><th>Lý do</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
+          <tbody>${rows || '<tr><td colspan="6" class="empty">Chưa có đơn nghỉ phép nào.</td></tr>'}</tbody>
+        </table>
+      </div>
+    `;
+    $('#view').innerHTML = html;
+  }
+
+  // 3. Hàm mở form
+  function openLeaveForm() {
+    const myBalance = getLeaveBalance(CURRENT.username);
+    $('#dlg-title').textContent = '🌴 Tạo Đơn Xin Nghỉ Phép';
+    $('#dlg-body').innerHTML = `
+      <div class="form-group full">
+        <label>Người xin nghỉ (Số dư: ${myBalance} ngày)</label>
+        <input type="text" value="${esc(CURRENT.name)}" readonly style="background:#f1f5f9; font-weight:bold;">
+      </div>
+      <div class="form-group">
+        <label>Loại nghỉ *</label>
+        <select id="leave-type">
+          <option>Phép năm (Trừ quỹ phép)</option>
+          <option>Nghỉ bù (Sau trực - Không trừ quỹ)</option>
+          <option>Nghỉ ốm (Không trừ quỹ)</option>
+          <option>Việc riêng có lương</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Trạng thái</label>
+        <input type="text" value="Chờ duyệt" readonly style="background:#f1f5f9">
+      </div>
+      <div class="form-group">
+        <label>Từ ngày *</label>
+        <input type="date" id="leave-start" value="${localDate()}">
+      </div>
+      <div class="form-group">
+        <label>Đến ngày *</label>
+        <input type="date" id="leave-end" value="${localDate()}">
+      </div>
+      <div class="form-group full">
+        <label>Lý do chi tiết *</label>
+        <textarea id="leave-reason" rows="2" placeholder="Nhập lý do..."></textarea>
+      </div>
+    `;
+    $('#dlg-foot').innerHTML = `
+      <button type="button" class="btn-soft" onclick="closeDlg()">Hủy</button>
+      <button type="button" class="btn" onclick="saveLeaveRequest()">💾 Gửi Đơn</button>
+    `;
+    $('#dlg').showModal();
+  }
+
+  // 4. Hàm lưu và kiểm tra số dư
+  function saveLeaveRequest() {
+    const start = $('#leave-start').value;
+    const end = $('#leave-end').value;
+    const reason = $('#leave-reason').value.trim();
+    const type = $('#leave-type').value;
+    
+    if (!start || !end) { toast('Vui lòng chọn ngày'); return; }
+    if (new Date(start) > new Date(end)) { toast('Ngày kết thúc phải sau ngày bắt đầu'); return; }
+    if (!reason) { toast('Vui lòng nhập lý do'); return; }
+
+    // Tính số ngày xin nghỉ
+    const days = Math.ceil((new Date(end) - new Date(start)) / (1000 * 60 * 60 * 24)) + 1;
+    
+    // Nếu là phép năm, kiểm tra số dư
+    if (type.includes('Phép năm')) {
+      const balance = getLeaveBalance(CURRENT.username);
+      if (days > balance) {
+        toast('Lỗi: Bạn chỉ còn ' + balance + ' ngày phép, không thể xin ' + days + ' ngày!');
+        return;
+      }
+    }
+
+    const newId = uid();
+    DB.data.leave_requests.push({
+      id: newId,
+      empName: CURRENT.name,
+      empCode: CURRENT.username,
+      type: type,
+      startDate: start,
+      endDate: end,
+      days: days,
+      reason: reason,
+      status: 'Chờ duyệt',
+      createdAt: Date.now()
+    });
+    
+    audit('create', 'leave_requests', newId, CURRENT.name + ' xin nghỉ ' + days + ' ngày');
+    saveDB(); closeDlg(); renderLeaveModule(); 
+    toast('Đã gửi đơn nghỉ phép');
+  }
+
+  // 5. Cập nhật hàm Duyệt (Tự động trừ quỹ phép)
+  function updateLeaveStatus(id, status) {
+    const l = DB.data.leave_requests.find(x => x.id === id);
+    if (!l) return;
+    if (!confirm(`Xác nhận ${status} đơn của ${l.empName}?`)) return;
+    
+    l.status = status;
+    l.approvedBy = CURRENT.name;
+    
+    // Nếu duyệt đơn Phép năm -> Trừ số dư
+    if (status === 'Đã duyệt' && l.type.includes('Phép năm')) {
+      if(!DB.data.leave_balances) DB.data.leave_balances = {};
+      const currentB = getLeaveBalance(l.empCode);
+      DB.data.leave_balances[l.empCode] = currentB - l.days;
+    }
+    // Nếu từ chối đơn đã duyệt trước đó (hoàn lại phép) -> Cộng lại số dư
+    if (status === 'Từ chối' && l.status === 'Đã duyệt' && l.type.includes('Phép năm')) {
+       const currentB = getLeaveBalance(l.empCode);
+       DB.data.leave_balances[l.empCode] = currentB + l.days;
+    }
+    
+    audit('update', 'leave_requests', id, status);
+    saveDB(); renderLeaveModule();
+    toast('Đã cập nhật trạng thái');
+  }
+</script>
+<!-- KẾT THÚC MODULE NGHỈ PHÉP -->
 </body>
 </html>
