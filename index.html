@@ -211,6 +211,7 @@ function can(mod,action){
 }
 
 const SCHEMA={
+    payroll: {g:'K', n:'Tính Công Ngoài Giờ', icon:'💰', view:'payroll'},
     approval_hub: {g:'K', n:'Trung Tâm Phê Duyệt', icon:'✅', view:'approval_hub'},
     ops_center: {g:'K', n:'Trung Tâm Vận Hành', icon:'🚀', view:'ops_center'},
   // ---- A. DASHBOARD (7) ----
@@ -958,6 +959,7 @@ function route(k){
   else if(m.view==='settings')renderSettings();
   else if(m.view==='monthly_report')renderMonthlyReportView();
   else if(m.view==='calendar')       renderCalendar();
+      else if(m.view==='payroll')   renderPayroll();
       else if(m.view==='my_workspace')   renderMyWorkspace();
       else if(m.view==='approval_hub')   renderApprovalHub();
       else if(m.view==='ops_center') renderOpsCenter();
@@ -3565,6 +3567,154 @@ async function doLogin(){
     $('#view').innerHTML = html;
   }
 </script>
-<!-- KẾT THÚC GÓC LÀM VIỆC -->
+<!-- ================================================== -->
+<!-- MODULE: BẢNG TÍNH CÔNG NGOÀI GIỜ (PAYROLL)         -->
+<!-- ================================================== -->
+<script>
+  // Cấu hình đơn giá và hệ số (Có thể sửa ở đây)
+  const PAYROLL_CONFIG = {
+    baseRate: 200000, // Đơn giá 1 giờ cơ bản (VNĐ)
+    multipliers: {
+      'Trực ngày': 1.0,
+      'Trực đêm (22h-6h)': 1.3,
+      'Trực lễ/Chủ nhật': 2.0
+    }
+  };
+
+  function renderPayroll() {
+    if(!can('dashboard', 'r')) return; // Chỉ Admin/Trưởng khoa
+
+    if(!DB.data.payroll_records) DB.data.payroll_records = [];
+    
+    const records = DB.data.payroll_records.filter(x => !x._deleted).reverse();
+    const totalAmount = records.reduce((sum, r) => sum + (r.totalAmount || 0), 0);
+
+    let rows = records.map(r => `
+      <tr>
+        <td>${fmtDate(r.date)}</td>
+        <td><b>${esc(r.empName)}</b></td>
+        <td><span class="badge info">${esc(r.shiftType)}</span></td>
+        <td style="text-align:center;">${r.hours}</td>
+        <td style="text-align:right;">${fmtNum(r.rate)} đ</td>
+        <td style="text-align:right; font-weight:bold; color:var(--accent);">${fmtNum(r.totalAmount)} đ</td>
+        <td><button class="icon-btn" onclick="delPayroll('${r.id}')">🗑️</button></td>
+      </tr>
+    `).join('');
+
+    let html = `
+      <div class="page-head">
+        <div>
+          <h1>💰 Bảng Tính Công Ngoài Giờ</h1>
+          <div class="subtitle">Quản lý thù lao trực đêm, trực lễ (P0)</div>
+        </div>
+        <button class="btn" onclick="openPayrollForm()">+ Thêm Ca Trực</button>
+      </div>
+
+      <div class="tiles" style="grid-template-columns: repeat(3, 1fr); margin-bottom: 20px;">
+        <div class="tile">
+          <small>Tổng số ca đã nhập</small>
+          <strong>${records.length}</strong>
+        </div>
+        <div class="tile">
+          <small>Đơn giá cơ bản (1 giờ)</small>
+          <strong style="color:var(--warn); font-size:22px;">${fmtNum(PAYROLL_CONFIG.baseRate)} đ</strong>
+        </div>
+        <div class="tile" style="background:linear-gradient(135deg, #dcfce7, #bbf7d0); border:none;">
+          <small style="color:#166534;">Tổng tiền phải trả</small>
+          <strong style="color:#15803d; font-size:24px;">${fmtNum(totalAmount)} đ</strong>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Chi tiết thanh toán</h3>
+        <div class="table-wrap" style="margin-top: 10px;">
+          <table>
+            <thead>
+              <tr><th>Ngày</th><th>Nhân viên</th><th>Loại ca</th><th style="text-align:center;">Số giờ</th><th style="text-align:right;">Đơn giá/giờ</th><th style="text-align:right;">Thành tiền</th><th></th></tr>
+            </thead>
+            <tbody>
+              ${records.length > 0 ? rows : '<tr><td colspan="7" class="empty">Chưa có dữ liệu ca trực.</td></tr>'}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+    $('#view').innerHTML = html;
+  }
+
+  function openPayrollForm() {
+    const staffOptions = (DB.data.staff || []).map(s => `<option value="${esc(s.fullName)}">${esc(s.fullName)}</option>`).join('');
+    
+    $('#dlg-title').textContent = '💰 Thêm Ca Trực Tính Lương';
+    $('#dlg-body').innerHTML = `
+      <div class="form-group full">
+        <label>Nhân viên *</label>
+        <select id="pay-emp">${staffOptions}</select>
+      </div>
+      <div class="form-group">
+        <label>Ngày trực *</label>
+        <input type="date" id="pay-date" value="${localDate()}">
+      </div>
+      <div class="form-group">
+        <label>Loại ca trực</label>
+        <select id="pay-type" onchange="updatePayRate()">
+          <option value="Trực ngày">Trực ngày (Hệ số x1.0)</option>
+          <option value="Trực đêm (22h-6h)">Trực đêm (Hệ số x1.3)</option>
+          <option value="Trực lễ/Chủ nhật">Trực lễ/Chủ nhật (Hệ số x2.0)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Số giờ trực *</label>
+        <input type="number" id="pay-hours" value="8" min="1" oninput="updatePayRate()">
+      </div>
+      <div class="form-group full" style="background:var(--soft); padding:15px; border-radius:8px; text-align:center;">
+        <label style="color:var(--accent); font-size:14px; margin-bottom:5px;">Thành tiền dự kiến</label>
+        <div id="pay-preview" style="font-size:24px; font-weight:bold; color:var(--accent2);">0 đ</div>
+      </div>
+    `;
+    $('#dlg-foot').innerHTML = `
+      <button type="button" class="btn-soft" onclick="closeDlg()">Hủy</button>
+      <button type="button" class="btn" onclick="savePayroll()">💾 Lưu Ca Trực</button>
+    `;
+    $('#dlg').showModal();
+    updatePayRate(); // Cập nhật giá tiền lần đầu
+  }
+
+  function updatePayRate() {
+    const type = document.getElementById('pay-type').value;
+    const hours = Number(document.getElementById('pay-hours').value) || 0;
+    const multiplier = PAYROLL_CONFIG.multipliers[type] || 1;
+    const total = PAYROLL_CONFIG.baseRate * multiplier * hours;
+    
+    document.getElementById('pay-preview').innerText = fmtNum(total) + ' đ';
+  }
+
+  function savePayroll() {
+    const empName = document.getElementById('pay-emp').value;
+    const date = document.getElementById('pay-date').value;
+    const type = document.getElementById('pay-type').value;
+    const hours = Number(document.getElementById('pay-hours').value);
+    
+    if(!empName || !date || hours <= 0) { toast('Vui lòng nhập đủ thông tin'); return; }
+
+    const multiplier = PAYROLL_CONFIG.multipliers[type] || 1;
+    const rate = PAYROLL_CONFIG.baseRate * multiplier;
+    const totalAmount = rate * hours;
+
+    DB.data.payroll_records.push({
+      id: uid(), empName, date, shiftType: type, hours, rate, totalAmount, createdAt: Date.now()
+    });
+    
+    saveDB(); closeDlg(); renderPayroll(); toast('Đã lưu ca trực');
+  }
+
+  function delPayroll(id) {
+    if(!confirm('Xóa ca trực này?')) return;
+    const r = DB.data.payroll_records.find(x => x.id === id);
+    if(r) { r._deleted = true; r.updatedAt = Date.now(); }
+    saveDB(); renderPayroll(); toast('Đã xóa');
+  }
+</script>
+<!-- KẾT THÚC BẢNG TÍNH CÔNG -->
 </body>
 </html>
