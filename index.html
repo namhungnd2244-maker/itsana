@@ -211,6 +211,7 @@ function can(mod,action){
 }
 
 const SCHEMA={
+    emergency_dashboard: {g:'K', n:'Báo Động & Cấp Cứu', icon:'🚨', view:'emergency_dashboard'},
     payroll: {g:'K', n:'Tính Công Ngoài Giờ', icon:'💰', view:'payroll'},
     approval_hub: {g:'K', n:'Trung Tâm Phê Duyệt', icon:'✅', view:'approval_hub'},
     ops_center: {g:'K', n:'Trung Tâm Vận Hành', icon:'🚀', view:'ops_center'},
@@ -959,6 +960,7 @@ function route(k){
   else if(m.view==='settings')renderSettings();
   else if(m.view==='monthly_report')renderMonthlyReportView();
   else if(m.view==='calendar')       renderCalendar();
+      else if(m.view==='emergency_dashboard') renderEmergencyDashboard();
       else if(m.view==='payroll')   renderPayroll();
       else if(m.view==='my_workspace')   renderMyWorkspace();
       else if(m.view==='approval_hub')   renderApprovalHub();
@@ -3806,6 +3808,146 @@ async function doLogin(){
     `).join('');
   }
 </script>
-<!-- KẾT THÚC TÌM KIẾM TOÀN CẦU -->
+<!-- ================================================== -->
+<!-- MODULE: NOTIFICATION & EMERGENCY (P0: 3, 4, 16)    -->
+<!-- ================================================== -->
+<script>
+  // 1. Khởi tạo bộ nhớ thông báo
+  if(!DB.data.notifications) DB.data.notifications = [];
+  if(!DB.data.emergency_alerts) DB.data.emergency_alerts = [];
+
+  // 2. Tự động chèn Chuông thông báo lên Header
+  setTimeout(() => {
+    const headerActions = document.querySelector('header.top .actions');
+    if (headerActions && !document.getElementById('notif-bell')) {
+      const bell = document.createElement('button');
+      bell.id = 'notif-bell';
+      bell.className = 'btn-soft btn-sm';
+      bell.style.position = 'relative';
+      bell.innerHTML = '🔔 <span id="notif-count" style="background:var(--bad);color:white;padding:2px 6px;border-radius:10px;font-size:10px;margin-left:5px;display:none;">0</span>';
+      bell.onclick = openNotifications;
+      headerActions.insertBefore(bell, headerActions.firstChild);
+      updateBellIcon();
+    }
+  }, 1500);
+
+  function updateBellIcon() {
+    const unread = DB.data.notifications.filter(n => !n.read).length;
+    const countEl = document.getElementById('notif-count');
+    if(countEl) {
+      countEl.innerText = unread;
+      countEl.style.display = unread > 0 ? 'inline-block' : 'none';
+    }
+  }
+
+  function openNotifications() {
+    // Đánh dấu đã đọc
+    DB.data.notifications.forEach(n => n.read = true);
+    saveDB();
+    updateBellIcon();
+
+    $('#dlg-title').textContent = '🔔 Trung Tâm Thông Báo';
+    let html = DB.data.notifications.slice(0, 20).map(n => `
+      <div style="padding:12px; border-bottom:1px solid var(--line); display:flex; gap:10px;">
+        <div style="font-size:24px;">${n.title.includes('BÁO ĐỘNG') ? '🚨' : '📌'}</div>
+        <div style="flex:1;">
+          <b style="font-size:13px; color:${n.title.includes('BÁO ĐỘNG') ? 'var(--bad)' : 'var(--ink)'};">${esc(n.title)}</b>
+          <div style="font-size:13px; color:var(--ink); margin-top:2px;">${esc(n.msg)}</div>
+          <div style="font-size:10px; color:var(--muted); margin-top:6px;">${new Date(n.ts).toLocaleString('vi-VN')}</div>
+        </div>
+      </div>
+    `).join('');
+    $('#dlg-body').innerHTML = `<div class="full" style="max-height:400px; overflow-y:auto;">${html || '<div class="empty">Không có thông báo nào.</div>'}</div>`;
+    $('#dlg-foot').innerHTML = `<button class="btn-soft" onclick="closeDlg()">Đóng</button>`;
+    $('#dlg').showModal();
+  }
+
+  // Hàm kích hoạt thông báo (sẽ dùng cho các module khác)
+  window.addNotification = function(title, msg) {
+    DB.data.notifications.unshift({ id: uid(), title, msg, ts: Date.now(), read: false });
+    saveDB();
+    updateBellIcon();
+  }
+
+  // 3. Giao diện Báo động đỏ & Trực cấp cứu
+  function renderEmergencyDashboard() {
+    const todayStr = localDate();
+    
+    // Tìm bác sĩ đang trực hôm nay (quét từ Lịch làm việc)
+    let onCallDoc = 'Chưa phân công';
+    try {
+      const weekStart = typeof rsWeekStart !== 'undefined' ? rsWeekStart(new Date()) : todayStr;
+      const roster = (DB.data.roster || []).find(r => r.weekStart === weekStart && r.kind === 'doctor');
+      if(roster && roster.cells) {
+         const dayIdx = (new Date().getDay() + 6) % 7;
+         for(const key in roster.cells) {
+           const parts = key.split('|');
+           if(Number(parts[1]) === dayIdx && roster.cells[key].length > 0) {
+             // Lấy tên
+             const codes = roster.cells[key];
+             const names = codes.map(c => {
+                const s = (DB.data.staff||[]).find(x => x.empCode === c);
+                return s ? s.fullName : c;
+             });
+             onCallDoc = names.join(', ');
+             break;
+           }
+         }
+      }
+    } catch(e) { console.log(e); }
+
+    let html = `
+      <div class="page-head">
+        <div><h1>🚨 Báo Động & Cấp Cứu</h1><div class="subtitle">Hệ thống điều phối khẩn cấp (STAT / Code Red)</div></div>
+      </div>
+      
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
+        <!-- Cột Báo động -->
+        <div class="card" style="background:linear-gradient(135deg, #fee2e2, #fecaca); border:2px solid #ef4444; text-align:center; padding:40px 20px; display:flex; flex-direction:column; justify-content:center;">
+          <h2 style="color:#b91c1c; font-size:24px; margin-bottom:10px;">KÍCH HOẠT BÁO ĐỘNG ĐỎ</h2>
+          <p style="color:#7f1d1d; margin-bottom:20px; font-size:13px;">Bấm nút dưới đây để phát tín hiệu khẩn cấp đến toàn bộ Ekip và gửi thông báo lên hệ thống.</p>
+          <button class="btn" style="background:#dc2626; font-size:20px; padding:15px 40px; border-radius:50px; box-shadow:0 10px 20px rgba(220,38,38,0.4); width:100%;" onclick="triggerCodeRed()">
+            🔴 BÁO ĐỘNG ĐỎ
+          </button>
+        </div>
+
+        <!-- Cột Ekip trực -->
+        <div class="card">
+          <h3>Ekip trực hôm nay (${fmtDate(todayStr)})</h3>
+          <div style="margin-top:15px; padding:15px; background:var(--soft); border-radius:10px; border-left:4px solid var(--accent);">
+            <div style="font-size:11px; color:var(--muted); text-transform:uppercase; font-weight:bold;">Bác sĩ CĐHA trực</div>
+            <div style="font-size:20px; font-weight:bold; color:var(--accent); margin-top:4px;">${esc(onCallDoc)}</div>
+          </div>
+          <div style="margin-top:10px; padding:15px; background:var(--soft); border-radius:10px; border-left:4px solid var(--warn);">
+            <div style="font-size:11px; color:var(--muted); text-transform:uppercase; font-weight:bold;">KTV Trực</div>
+            <div style="font-size:20px; font-weight:bold; color:var(--warn); margin-top:4px;">Đang cập nhật...</div>
+          </div>
+          <div style="margin-top:10px; padding:15px; background:var(--soft); border-radius:10px; border-left:4px solid var(--good);">
+            <div style="font-size:11px; color:var(--muted); text-transform:uppercase; font-weight:bold;">Ekip Gây mê (An thần)</div>
+            <div style="font-size:20px; font-weight:bold; color:var(--good); margin-top:4px;">Đang cập nhật...</div>
+          </div>
+        </div>
+      </div>
+    `;
+    $('#view').innerHTML = html;
+  }
+
+  function triggerCodeRed() {
+    if(!confirm('XÁC NHẬN: Kích hoạt báo động đỏ toàn khoa CĐHA?')) return;
+    
+    // Tạo thông báo khẩn
+    addNotification(
+      '🚨 BÁO ĐỘNG ĐỎ', 
+      `${CURRENT.name} vừa kích hoạt báo động đỏ! Yêu cầu toàn bộ ekip trực có mặt ngay lập tức.`
+    );
+    
+    // Ghi log
+    audit('create', 'emergency_alerts', '', 'Báo động đỏ bởi ' + CURRENT.name);
+    
+    toast('🔴 Đã phát lệnh Báo Động Đỏ đến toàn hệ thống!');
+    openNotifications(); // Tự động mở bảng thông báo cho người bấm
+  }
+</script>
+<!-- KẾT THÚC NOTIFICATION & EMERGENCY -->
 </body>
 </html>
