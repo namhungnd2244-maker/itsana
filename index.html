@@ -211,6 +211,7 @@ function can(mod,action){
 }
 
 const SCHEMA={
+    unified_calendar: {g:'D', n:'Lịch Hợp Nhất', icon:'🗓️', view:'unified_calendar'},
     procedure_mgmt: {g:'C', n:'Quản Lý Thủ Thuật', icon:'🔪', view:'procedure_mgmt'},
     emergency_dashboard: {g:'K', n:'Báo Động & Cấp Cứu', icon:'🚨', view:'emergency_dashboard'},
     payroll: {g:'K', n:'Tính Công Ngoài Giờ', icon:'💰', view:'payroll'},
@@ -962,6 +963,7 @@ function route(k){
   else if(m.view==='settings')renderSettings();
   else if(m.view==='monthly_report')renderMonthlyReportView();
   else if(m.view==='calendar')       renderCalendar();
+      else if(m.view==='unified_calendar') renderUnifiedCalendar();
       else if(m.view==='procedure_mgmt') renderProcedureMgmt();
       else if(m.view==='sedation_team') renderSedationTeam();
       else if(m.view==='emergency_dashboard') renderEmergencyDashboard();
@@ -4242,6 +4244,96 @@ async function doLogin(){
     saveDB(); renderProcedureMgmt();
   }
 </script>
-<!-- KẾT THÚC QUẢN LÝ THỦ THUẬT -->
+<!-- ================================================== -->
+<!-- MODULE: LỊCH HỢP NHẤT (UNIFIED CALENDAR - P0 SỐ 18)-->
+<!-- ================================================== -->
+<script>
+  let UCAL_DATE = new Date();
+
+  function renderUnifiedCalendar() {
+    const year = UCAL_DATE.getFullYear();
+    const month = UCAL_DATE.getMonth();
+    
+    // Thiết lập ngày đầu và ngày cuối tháng
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const daysInMonth = lastDay.getDate();
+    
+    // Tính thứ của ngày đầu tháng (T2 là 0, CN là 6)
+    let startDow = (firstDay.getDay() + 6) % 7; 
+
+    // Lấy dữ liệu
+    const leaves = (DB.data.leave_requests || []).filter(l => l.status === 'Đã duyệt' && !l._deleted);
+    const events = (DB.data.events || []).filter(e => !e._deleted);
+    // Tạm thời lấy lịch trực từ module Roster (nếu có)
+    const rosters = (DB.data.roster || []).filter(r => !r._deleted);
+
+    let html = `
+      <div class="page-head">
+        <div><h1>🗓️ Lịch Hợp Nhất</h1><div class="subtitle">Tổng hợp Lịch họp · Ca trực · Nghỉ phép</div></div>
+        <div class="cal-toolbar" style="margin:0;">
+          <div class="nav-btns">
+            <button class="btn-soft" onclick="ucalPrev()">◀</button>
+            <button class="btn-soft" onclick="ucalToday()">Tháng này</button>
+            <button class="btn-soft" onclick="ucalNext()">▶</button>
+          </div>
+          <div class="title" style="font-size:18px; font-weight:bold; margin-left:15px;">Tháng ${month + 1} / ${year}</div>
+        </div>
+      </div>
+
+      <!-- Chú thích màu -->
+      <div style="display:flex; gap:15px; margin-bottom:15px; font-size:12px;">
+        <div><span class="badge" style="background:#dbeafe; color:#1e40af;">🔵 Lịch họp</span></div>
+        <div><span class="badge" style="background:#fef3c7; color:#92400e;">🟡 Trực</span></div>
+        <div><span class="badge" style="background:#fee2e2; color:#b91c1c;">🔴 Nghỉ phép</span></div>
+      </div>
+
+      <div class="cal-grid" style="background:var(--line); gap:1px; border:1px solid var(--line);">
+    `;
+    
+    // Vẽ header Thứ
+    ['T2','T3','T4','T5','T6','T7','CN'].forEach(d => {
+      html += `<div style="background:var(--panel2); text-align:center; padding:10px 0; font-size:11px; font-weight:bold; color:var(--muted); text-transform:uppercase;">${d}</div>`;
+    });
+
+    // Vẽ các ô trống đầu tháng
+    for(let i=0; i<startDow; i++) {
+      html += `<div style="background:var(--panel); min-height:100px;"></div>`;
+    }
+
+    // Vẽ các ngày trong tháng
+    const todayStr = localDate();
+    for(let d=1; d<=daysInMonth; d++) {
+      const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      const isToday = dateStr === todayStr;
+      
+      // 1. Tìm lịch họp
+      const dayEvents = events.filter(e => e.date === dateStr);
+      const eventHtml = dayEvents.map(e => `<div style="font-size:10px; background:#dbeafe; color:#1e40af; padding:2px 4px; border-radius:4px; margin-bottom:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">🔵 ${esc(e.title)}</div>`).join('');
+
+      // 2. Tìm người nghỉ phép
+      const dayLeaves = leaves.filter(l => dateStr >= l.startDate && dateStr <= l.endDate);
+      const leaveHtml = dayLeaves.map(l => `<div style="font-size:10px; background:#fee2e2; color:#b91c1c; padding:2px 4px; border-radius:4px; margin-bottom:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">🔴 Nghỉ: ${esc(l.empName || l.empCode)}</div>`).join('');
+
+      // (Sẽ bổ sung logic quét lịch trực vào đây ở bước sau)
+      
+      html += `
+        <div style="background:var(--panel); min-height:110px; padding:6px; ${isToday ? 'border:2px solid var(--accent);' : ''}">
+          <div style="font-weight:bold; font-size:13px; color:${isToday ? 'var(--accent)' : 'var(--ink)'}; margin-bottom:4px;">${d}</div>
+          ${eventHtml}
+          ${leaveHtml}
+        </div>
+      `;
+    }
+    
+    html += `</div>`;
+    $('#view').innerHTML = html;
+  }
+
+  function ucalPrev() { UCAL_DATE.setMonth(UCAL_DATE.getMonth() - 1); renderUnifiedCalendar(); }
+  function ucalNext() { UCAL_DATE.setMonth(UCAL_DATE.getMonth() + 1); renderUnifiedCalendar(); }
+  function ucalToday() { UCAL_DATE = new Date(); renderUnifiedCalendar(); }
+</script>
+<!-- KẾT THÚC LỊCH HỢP NHẤT -->
 </body>
 </html>
