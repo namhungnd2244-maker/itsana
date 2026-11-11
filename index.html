@@ -181,7 +181,7 @@ const fmtDate = v=>{if(!v)return '—';const d=new Date(v);return isNaN(d)?v:d.t
 const fmtNum = v=>v===''||v==null?'—':Number(v).toLocaleString('vi-VN');
 /* ===== V5.1 HELPERS ===== */
 const localDate = (d=new Date()) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-const liveEvents = () => liveEvents().filter(e=>!e._deleted);
+const liveEvents = () => (DB.data.events || []).filter(e => !e._deleted);
 const getSyncCfg = () => { try{ return JSON.parse(localStorage.getItem('nd2_sync')||'{}'); }catch(e){ return {}; } };
 function setSyncBadge(state,text){ const b=$('#sync-badge'); if(!b) return; b.className='sync-badge '+(state||''); b.textContent='☁️ '+text; }
 function mergeRows(local,cloud){
