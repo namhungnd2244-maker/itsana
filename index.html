@@ -3253,37 +3253,15 @@ async function doLogin(){
   }
 
   // 2. Hàm vẽ giao diện chính
-  function renderLeaveModule() {
-    if(!can('leave', 'r')) { $('#view').innerHTML = '<div class="empty">Bạn không có quyền.</div>'; return; }
-    
+     function renderLeaveModule() {
+    // Khởi tạo dữ liệu
     if(!DB.data.leave_requests) DB.data.leave_requests = [];
-    const leaves = DB.data.leave_requests.filter(x => !x._deleted).reverse();
-    
-    const isManager = CURRENT.role === 'admin' || CURRENT.role === 'doctor';
-    const myBalance = getLeaveBalance(CURRENT.username); // Lấy số dư của người đang đăng nhập
+    if(!DB.data.leave_balances) DB.data.leave_balances = {};
+    if(DB.data.leave_balances[CURRENT.username] === undefined) DB.data.leave_balances[CURRENT.username] = 12;
 
-    let rows = leaves.map(l => {
-      const statusColor = l.status === 'Đã duyệt' ? 'good' : l.status === 'Từ chối' ? 'bad' : 'warn';
-      let actionBtns = '';
-      if (l.status === 'Chờ duyệt' && isManager) {
-        actionBtns = `
-          <button class="btn-soft btn-sm" style="color:var(--good); border-color:var(--good)" onclick="updateLeaveStatus('${l.id}', 'Đã duyệt')">✓ Duyệt</button>
-          <button class="btn-soft btn-sm" style="color:var(--bad); border-color:var(--bad)" onclick="updateLeaveStatus('${l.id}', 'Từ chối')">✕ Từ chối</button>
-        `;
-      } else {
-        actionBtns = `<span style="font-size:11px; color:var(--muted)">${l.approvedBy ? 'Duyệt: '+l.approvedBy : ''}</span>`;
-      }
-      return `
-        <tr>
-          <td><b>${esc(l.empName)}</b></td>
-          <td><span class="badge info">${esc(l.type)}</span></td>
-          <td>${esc(l.startDate)} <br><span style="color:var(--muted); font-size:11px">đến</span><br> ${esc(l.endDate)}</td>
-          <td style="max-width:200px; white-space:normal;">${esc(l.reason)}</td>
-          <td><span class="badge ${statusColor}">${esc(l.status)}</span></td>
-          <td>${actionBtns}</td>
-        </tr>
-      `;
-    }).join('');
+    const leaves = DB.data.leave_requests.filter(x => !x._deleted).reverse();
+    const myBalance = DB.data.leave_balances[CURRENT.username];
+    const isManager = CURRENT.role === 'admin' || CURRENT.role === 'doctor';
 
     let html = `
       <div class="page-head">
@@ -3297,14 +3275,47 @@ async function doLogin(){
       </div>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Nhân viên</th><th>Loại nghỉ</th><th>Thời gian</th><th>Lý do</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
-          <tbody>${rows || '<tr><td colspan="6" class="empty">Chưa có đơn nghỉ phép nào.</td></tr>'}</tbody>
-        </table>
-      </div>
+          <thead>
+            <tr>
+              <th>Nhân viên</th><th>Loại nghỉ</th><th>Từ ngày</th><th>Đến ngày</th><th>Lý do</th><th>Trạng thái</th><th>Thao tác</th>
+            </tr>
+          </thead>
+          <tbody>
     `;
+
+    if(leaves.length === 0) {
+      html += `<tr><td colspan="7" class="empty">Chưa có đơn nghỉ phép nào.</td></tr>`;
+    } else {
+      leaves.forEach(l => {
+        const statusColor = l.status === 'Đã duyệt' ? 'good' : l.status === 'Từ chối' ? 'bad' : 'warn';
+        let actionBtns = '';
+        
+        if (l.status === 'Chờ duyệt' && isManager) {
+          actionBtns = `
+            <button class="btn-soft btn-sm" style="color:var(--good); border-color:var(--good)" onclick="updateLeaveStatus('${l.id}', 'Đã duyệt')">✓ Duyệt</button>
+            <button class="btn-soft btn-sm" style="color:var(--bad); border-color:var(--bad)" onclick="updateLeaveStatus('${l.id}', 'Từ chối')">✕ Từ chối</button>
+          `;
+        } else {
+          actionBtns = `<span style="font-size:11px; color:var(--muted)">${l.approvedBy ? 'Duyệt: '+l.approvedBy : ''}</span>`;
+        }
+
+        html += `
+          <tr>
+            <td><b>${esc(l.empName || l.empCode)}</b></td>
+            <td><span class="badge info">${esc(l.type)}</span></td>
+            <td>${esc(l.startDate)}</td>
+            <td>${esc(l.endDate)}</td>
+            <td>${esc(l.reason)}</td>
+            <td><span class="badge ${statusColor}">${esc(l.status)}</span></td>
+            <td>${actionBtns}</td>
+          </tr>
+        `;
+      });
+    }
+
+    html += `</tbody></table></div>`;
     $('#view').innerHTML = html;
   }
-
   // 3. Hàm mở form
   function openLeaveForm() {
     const myBalance = getLeaveBalance(CURRENT.username);
