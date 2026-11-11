@@ -211,6 +211,7 @@ function can(mod,action){
 }
 
 const SCHEMA={
+    procedure_mgmt: {g:'C', n:'Quản Lý Thủ Thuật', icon:'🔪', view:'procedure_mgmt'},
     emergency_dashboard: {g:'K', n:'Báo Động & Cấp Cứu', icon:'🚨', view:'emergency_dashboard'},
     payroll: {g:'K', n:'Tính Công Ngoài Giờ', icon:'💰', view:'payroll'},
     approval_hub: {g:'K', n:'Trung Tâm Phê Duyệt', icon:'✅', view:'approval_hub'},
@@ -961,6 +962,7 @@ function route(k){
   else if(m.view==='settings')renderSettings();
   else if(m.view==='monthly_report')renderMonthlyReportView();
   else if(m.view==='calendar')       renderCalendar();
+      else if(m.view==='procedure_mgmt') renderProcedureMgmt();
       else if(m.view==='sedation_team') renderSedationTeam();
       else if(m.view==='emergency_dashboard') renderEmergencyDashboard();
       else if(m.view==='payroll')   renderPayroll();
@@ -4100,6 +4102,146 @@ async function doLogin(){
     saveDB(); renderSedationTeam();
   }
 </script>
-<!-- KẾT THÚC EKIP GÂY MÊ -->
+<!-- ================================================== -->
+<!-- MODULE: QUẢN LÝ THỦ THUẬT (PROCEDURE MANAGEMENT)   -->
+<!-- ================================================== -->
+<script>
+  function renderProcedureMgmt() {
+    if(!DB.data.procedures) DB.data.procedures = [];
+    
+    const procedures = DB.data.procedures.filter(x => !x._deleted).reverse();
+    
+    let rows = procedures.map(p => {
+      const statusColor = p.status === 'Hoàn thành' ? 'good' : p.status === 'Đang thực hiện' ? 'warn' : 'info';
+      const checklistPassed = p.checklistConsent && p.checklistBlood ? '<span class="badge good">Đã đủ</span>' : '<span class="badge bad">Chưa đủ</span>';
+
+      return `
+        <tr>
+          <td>${fmtDate(p.date)}</td>
+          <td><b>${esc(p.patient)}</b></td>
+          <td><span class="badge info">${esc(p.type)}</span></td>
+          <td>${esc(p.doctor)}</td>
+          <td>${checklistPassed}</td>
+          <td><span class="badge ${statusColor}">${esc(p.status)}</span></td>
+          <td><button class="btn-soft btn-sm" onclick="updateProcedureStatus('${p.id}')">Cập nhật</button></td>
+        </tr>
+      `;
+    }).join('');
+
+    let html = `
+      <div class="page-head">
+        <div><h1>🔪 Quản Lý Thủ Thuật (Can thiệp)</h1><div class="subtitle">Sinh thiết, dẫn lưu, chọc dò...</div></div>
+        <button class="btn" onclick="openProcedureForm()">+ Thêm Thủ Thuật</button>
+      </div>
+
+      <div class="card">
+        <h3>Danh sách thủ thuật</h3>
+        <div class="table-wrap" style="margin-top: 10px;">
+          <table>
+            <thead>
+              <tr><th>Ngày</th><th>Bệnh nhân</th><th>Loại thủ thuật</th><th>Bác sĩ chính</th><th>Checklist an toàn</th><th>Trạng thái</th><th>Thao tác</th></tr>
+            </thead>
+            <tbody>
+              ${procedures.length > 0 ? rows : '<tr><td colspan="7" class="empty">Chưa có thủ thuật nào.</td></tr>'}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+    $('#view').innerHTML = html;
+  }
+
+  function openProcedureForm() {
+    const staffOptions = (DB.data.staff || []).map(s => `<option value="${esc(s.fullName)}">${esc(s.fullName)}</option>`).join('');
+    
+    $('#dlg-title').textContent = '🔪 Tạo Ca Thủ Thuật Mới';
+    $('#dlg-body').innerHTML = `
+      <div class="form-group full">
+        <label>Tên bệnh nhân *</label>
+        <input type="text" id="proc-patient" placeholder="VD: Bé Trần Thị C">
+      </div>
+      <div class="form-group">
+        <label>Ngày thực hiện *</label>
+        <input type="date" id="proc-date" value="${localDate()}">
+      </div>
+      <div class="form-group">
+        <label>Loại thủ thuật</label>
+        <select id="proc-type">
+          <option>Sinh thiết (Biopsy)</option>
+          <option>Dẫn lưu ổ áp xe</option>
+          <option>Chọc dò dịch màng phổi/ổ bụng</option>
+          <option>Can thiệp mạch</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Bác sĩ chính *</label>
+        <select id="proc-doctor">${staffOptions}</select>
+      </div>
+      <div class="form-group">
+        <label>Ekip hỗ trợ</label>
+        <input type="text" id="proc-team" placeholder="VD: KTV Nam, ĐD Hoa...">
+      </div>
+      
+      <div class="form-group full" style="background:var(--soft); padding:15px; border-radius:8px; margin-top:10px;">
+        <label style="color:var(--bad); margin-bottom:10px;">🛑 Checklist An Toàn (JCI Time-out)</label>
+        <label style="display:flex; align-items:center; gap:10px; font-size:13px; margin-bottom:8px;">
+          <input type="checkbox" id="proc-chk1" style="width:auto;"> Đã có giấy cam kết (Consent) của phụ huynh
+        </label>
+        <label style="display:flex; align-items:center; gap:10px; font-size:13px;">
+          <input type="checkbox" id="proc-chk2" style="width:auto;"> Đã có kết quả xét nghiệm đông máu
+        </label>
+      </div>
+    `;
+    $('#dlg-foot').innerHTML = `
+      <button type="button" class="btn-soft" onclick="closeDlg()">Hủy</button>
+      <button type="button" class="btn" onclick="saveProcedure()">💾 Lưu Ca</button>
+    `;
+    $('#dlg').showModal();
+  }
+
+  function saveProcedure() {
+    const patient = $('#proc-patient').value.trim();
+    const chk1 = document.getElementById('proc-chk1').checked;
+    const chk2 = document.getElementById('proc-chk2').checked;
+
+    if(!patient) { toast('Vui lòng nhập tên bệnh nhân'); return; }
+    if(!chk1 || !chk2) {
+      if(!confirm('CẢNH BÁO: Chưa hoàn tất Checklist an toàn. Bạn vẫn muốn lưu nháp ca này?')) return;
+    }
+
+    DB.data.procedures.push({
+      id: uid(),
+      date: $('#proc-date').value,
+      patient: patient,
+      type: $('#proc-type').value,
+      doctor: $('#proc-doctor').value,
+      team: $('#proc-team').value,
+      checklistConsent: chk1,
+      checklistBlood: chk2,
+      status: 'Chờ thực hiện',
+      createdAt: Date.now()
+    });
+    
+    saveDB(); closeDlg(); renderProcedureMgmt(); 
+    toast('Đã lưu ca thủ thuật');
+  }
+
+  function updateProcedureStatus(id) {
+    const p = DB.data.procedures.find(x => x.id === id);
+    if(!p) return;
+    
+    if(p.status === 'Chờ thực hiện') {
+      if(!p.checklistConsent || !p.checklistBlood) {
+        if(!confirm('Checklist chưa đủ. Bạn có chắc chắn muốn bắt đầu thực hiện?')) return;
+      }
+      p.status = 'Đang thực hiện';
+    }
+    else if(p.status === 'Đang thực hiện') p.status = 'Hoàn thành';
+    else p.status = 'Chờ thực hiện';
+    
+    saveDB(); renderProcedureMgmt();
+  }
+</script>
+<!-- KẾT THÚC QUẢN LÝ THỦ THUẬT -->
 </body>
 </html>
