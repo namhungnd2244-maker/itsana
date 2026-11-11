@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
+      <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0ea5e9">
+    <meta name="apple-mobile-web-app-capable" content="yes">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ND2 Radiology OS V5</title>
@@ -4334,6 +4337,17 @@ async function doLogin(){
   function ucalNext() { UCAL_DATE.setMonth(UCAL_DATE.getMonth() + 1); renderUnifiedCalendar(); }
   function ucalToday() { UCAL_DATE = new Date(); renderUnifiedCalendar(); }
 </script>
-<!-- KẾT THÚC LỊCH HỢP NHẤT -->
+<script>
+  // Đăng ký Service Worker cho PWA
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js').then(registration => {
+        console.log('PWA ServiceWorker registered!');
+      }).catch(err => {
+        console.log('ServiceWorker registration failed: ', err);
+      });
+    });
+  }
+</script>
 </body>
 </html>
