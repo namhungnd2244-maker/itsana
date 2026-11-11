@@ -3252,6 +3252,45 @@ async function doLogin(){
 
   // 2. Hàm vẽ giao diện chính
  <script>
+<!-- BẮT ĐẦU: CẢM BIẾN SỐ DƯ PHÉP (KHÔNG ĐỔI GIAO DIỆN) -->
+<script>
+  // Đợi hệ thống tải xong mới can thiệp
+  setTimeout(() => {
+    // Lưu lại hàm saveForm gốc của V5
+    const originalSaveForm = window.saveForm;
+    
+    // Ghi đè hàm saveForm: Chỉ can thiệp khi lưu Đơn nghỉ phép
+    window.saveForm = function(key, id) {
+      if (key === 'leave_requests') {
+        // Lấy dữ liệu từ form gốc của V5
+        const empCode = document.querySelector('[data-k="empCode"]').value;
+        const type = document.querySelector('[data-k="type"]').value;
+        const start = document.querySelector('[data-k="startDate"]').value;
+        const end = document.querySelector('[data-k="endDate"]').value;
 
+        if (start && end) {
+          const days = Math.ceil((new Date(end) - new Date(start)) / (1000 * 60 * 60 * 24)) + 1;
+          
+          // Khởi tạo quỹ phép nếu chưa có
+          if (!DB.data.leave_balances) DB.data.leave_balances = {};
+          if (DB.data.leave_balances[empCode] === undefined) DB.data.leave_balances[empCode] = 12;
+
+          if (type === 'Phép năm' && !id) { // Chỉ check khi tạo mới
+            if (days > DB.data.leave_balances[empCode]) {
+              alert("LỖI: Nhân viên " + empCode + " chỉ còn " + DB.data.leave_balances[empCode] + " ngày phép, không thể xin " + days + " ngày!");
+              return; // Dừng lại, không lưu
+            }
+            // Nếu hợp lệ, trừ quỹ phép
+            DB.data.leave_balances[empCode] -= days;
+            toast("Đã trừ " + days + " ngày phép. Số dư còn: " + DB.data.leave_balances[empCode] + " ngày.");
+          }
+        }
+      }
+      // Gọi hàm lưu gốc của V5
+      originalSaveForm(key, id);
+    };
+  }, 1000);
+</script>
+<!-- KẾT THÚC CẢM BIẾN SỐ DƯ PHÉP -->
 </body>
 </html>
