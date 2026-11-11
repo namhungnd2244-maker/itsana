@@ -211,6 +211,7 @@ function can(mod,action){
 }
 
 const SCHEMA={
+    ops_center: {g:'K', n:'Trung Tâm Vận Hành', icon:'🚀', view:'ops_center'},
   // ---- A. DASHBOARD (7) ----
   dash_executive:{g:'A',n:'Dashboard Lãnh đạo',icon:'📊',view:'dashboard'},
   dash_clinical:{g:'A',n:'Dashboard Chuyên môn',icon:'🩺',view:'dashboard'},
@@ -964,6 +965,7 @@ function route(k){
   else if(m.view==='settings')renderSettings();
   else if(m.view==='monthly_report')renderMonthlyReportView();
   else if(m.view==='calendar')       renderCalendar();
+      else if(m.view==='ops_center') renderOpsCenter();
   else if(m.view==='cases')          renderCases();
   else if(m.view==='template')       renderTemplateLibrary();
   else if(m.view==='equipment_360')  renderEquipment360();
@@ -2987,5 +2989,135 @@ async function doLogin(){
   saveDB(); audit('login','system',who.id,'Đăng nhập');
   await enterApp();
 }
-</script></body>
+</script>
+<!-- BẮT ĐẦU: TRUNG TÂM VẬN HÀNH (DÀNH CHO BÁC SĨ) -->
+<script>
+  function renderOpsCenter() {
+    if(!DB.data.appointments) DB.data.appointments = [];
+    if(!DB.data.tasks) DB.data.tasks = [];
+    if(!DB.data.inbox) DB.data.inbox = [];
+
+    let html = `<div class="page-head">
+      <div><h1>🚀 Trung Tâm Vận Hành</h1><div class="subtitle">Đặt lịch · Công việc · Hộp thư</div></div>
+    </div>
+    <div style="display:flex; gap:10px; margin-bottom:15px;">
+      <button class="btn btn-sm" onclick="switchOpsTab('appointments')">📅 Đặt Lịch Hẹn (${DB.data.appointments.length})</button>
+      <button class="btn-soft btn-sm" onclick="switchOpsTab('tasks')">📋 Công Việc (${DB.data.tasks.length})</button>
+      <button class="btn-soft btn-sm" onclick="switchOpsTab('inbox')">💬 Hộp Thư CSKH (${DB.data.inbox.length})</button>
+    </div>
+    <div id="ops-content"></div>`;
+
+    $('#view').innerHTML = html;
+    switchOpsTab('appointments');
+  }
+
+  function switchOpsTab(tab) {
+    const content = document.getElementById('ops-content');
+    const btns = document.querySelectorAll('.page-head + div button');
+    btns.forEach(b => { b.className = 'btn-soft btn-sm'; });
+    if(event) event.target.className = 'btn btn-sm';
+
+    if (tab === 'appointments') {
+      let rows = DB.data.appointments.filter(x => !x._deleted).map(a => `
+        <tr>
+          <td>${esc(a.date)}</td>
+          <td>${esc(a.time)}</td>
+          <td><b>${esc(a.patient)}</b></td>
+          <td>${esc(a.service)}</td>
+          <td><span class="badge ${a.status==='Đã xác nhận'?'good':'warn'}">${esc(a.status)}</span></td>
+          <td><button class="icon-btn" onclick="DB.data.appointments.find(x=>x.id==='${a.id}')._deleted=true; saveDB(); renderOpsCenter();">🗑️</button></td>
+        </tr>
+      `).join('');
+      content.innerHTML = `
+        <div class="card">
+          <div style="display:flex; justify-content:space-between; margin-bottom:15px;">
+            <h3 style="margin:0;">Danh sách lịch hẹn</h3>
+            <button class="btn btn-sm" onclick="addAppointment()">+ Thêm lịch hẹn</button>
+          </div>
+          <table class="table-wrap" style="width:100%;">
+            <thead><tr><th>Ngày</th><th>Giờ</th><th>Bệnh nhân</th><th>Dịch vụ</th><th>Trạng thái</th><th></th></tr></thead>
+            <tbody>${rows || '<tr><td colspan="6" class="empty">Chưa có lịch hẹn</td></tr>'}</tbody>
+          </table>
+        </div>`;
+    } 
+    else if (tab === 'tasks') {
+      const statuses = ['Cần làm', 'Đang làm', 'Hoàn thành'];
+      let kanban = `<div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:15px;">`;
+      statuses.forEach(status => {
+        const taskList = DB.data.tasks.filter(t => !t._deleted && t.status === status);
+        kanban += `<div class="card" style="background:var(--panel2); min-height:300px;">
+          <h3 style="text-align:center; color:var(--accent);">${status}</h3>
+          ${taskList.map(t => `<div style="background:#fff; padding:10px; border-radius:6px; margin-bottom:8px; border-left:3px solid var(--accent); box-shadow:var(--sh);">
+            <b>${esc(t.title)}</b>
+            <div style="font-size:11px; color:var(--muted); margin-top:5px;">PIC: ${esc(t.owner)}</div>
+            <div style="margin-top:8px; display:flex; gap:5px; justify-content:flex-end;">
+              ${status !== 'Cần làm' ? `<button class="btn-soft btn-sm" onclick="moveTask('${t.id}', -1)">◀</button>` : ''}
+              ${status !== 'Hoàn thành' ? `<button class="btn-soft btn-sm" onclick="moveTask('${t.id}', 1)">▶</button>` : ''}
+            </div>
+          </div>`).join('')}
+          <button class="btn-soft btn-sm" style="width:100%; margin-top:10px;" onclick="addTask('${status}')">+ Thêm</button>
+        </div>`;
+      });
+      kanban += `</div>`;
+      content.innerHTML = kanban;
+    }
+    else if (tab === 'inbox') {
+      let msgs = DB.data.inbox.filter(x => !x._deleted).map(m => `
+        <div style="padding:10px; border-bottom:1px solid var(--line); display:flex; gap:10px; align-items:flex-start;">
+          <div style="background:var(--accent); color:#fff; border-radius:50%; width:30px; height:30px; text-align:center; line-height:30px; font-weight:bold;">P</div>
+          <div style="flex:1;">
+            <b style="font-size:12px;">Phụ huynh (${new Date(m.ts).toLocaleTimeString('vi-VN')})</b>
+            <div style="font-size:13px; margin-top:3px;">${esc(m.text)}</div>
+          </div>
+          <button class="btn-soft btn-sm" onclick="DB.data.inbox.find(x=>x.id==='${m.id}')._deleted=true; saveDB(); renderOpsCenter();">Đã xử lý</button>
+        </div>
+      `).join('');
+      content.innerHTML = `
+        <div class="card">
+          <div style="display:flex; justify-content:space-between; margin-bottom:15px;">
+            <h3 style="margin:0;">Hộp thư hỗ trợ</h3>
+            <button class="btn btn-sm" onclick="addInboxMessage()">+ Tin nhắn mới</button>
+          </div>
+          <div style="max-height:400px; overflow-y:auto;">
+            ${msgs || '<div class="empty">Không có tin nhắn nào.</div>'}
+          </div>
+        </div>`;
+    }
+  }
+
+  function addAppointment() {
+    const p = prompt("Nhập tên bệnh nhân:");
+    if(!p) return;
+    const s = prompt("Dịch vụ (VD: Chụp MRI, X-quang):", "Chụp X-quang");
+    DB.data.appointments.push({ id: uid(), patient: p, service: s, date: localDate(), time: "08:00", status: 'Chờ xác nhận', createdAt: Date.now() });
+    saveDB(); renderOpsCenter(); toast('Đã thêm lịch hẹn');
+  }
+
+  function addTask(status) {
+    const t = prompt("Nhập tên công việc:");
+    if(!t) return;
+    const o = prompt("Người phụ trách (PIC):", CURRENT.name);
+    DB.data.tasks.push({ id: uid(), title: t, owner: o, status: status, createdAt: Date.now() });
+    saveDB(); renderOpsCenter(); toast('Đã thêm công việc');
+  }
+
+  function moveTask(id, dir) {
+    const statuses = ['Cần làm', 'Đang làm', 'Hoàn thành'];
+    const task = DB.data.tasks.find(t => t.id === id);
+    if(!task) return;
+    let idx = statuses.indexOf(task.status) + dir;
+    if(idx >= 0 && idx < statuses.length) {
+      task.status = statuses[idx];
+      saveDB(); renderOpsCenter();
+    }
+  }
+
+  function addInboxMessage() {
+    const m = prompt("Nhập nội dung tin nhắn:");
+    if(!m) return;
+    DB.data.inbox.push({ id: uid(), text: m, ts: Date.now() });
+    saveDB(); renderOpsCenter(); toast('Đã nhận tin nhắn');
+  }
+</script>
+</body>
 </html>
