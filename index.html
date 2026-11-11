@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
+      <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0ea5e9">
+    <meta name="apple-mobile-web-app-capable" content="yes">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ND2 Radiology OS V5</title>
@@ -181,7 +184,7 @@ const fmtDate = v=>{if(!v)return '—';const d=new Date(v);return isNaN(d)?v:d.t
 const fmtNum = v=>v===''||v==null?'—':Number(v).toLocaleString('vi-VN');
 /* ===== V5.1 HELPERS ===== */
 const localDate = (d=new Date()) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-const liveEvents = () => liveEvents().filter(e=>!e._deleted);
+const liveEvents = () => (DB.data.events || []).filter(e => !e._deleted);
 const getSyncCfg = () => { try{ return JSON.parse(localStorage.getItem('nd2_sync')||'{}'); }catch(e){ return {}; } };
 function setSyncBadge(state,text){ const b=$('#sync-badge'); if(!b) return; b.className='sync-badge '+(state||''); b.textContent='☁️ '+text; }
 function mergeRows(local,cloud){
@@ -211,7 +214,14 @@ function can(mod,action){
 }
 
 const SCHEMA={
+    unified_calendar: {g:'D', n:'Lịch Hợp Nhất', icon:'🗓️', view:'unified_calendar'},
+    procedure_mgmt: {g:'C', n:'Quản Lý Thủ Thuật', icon:'🔪', view:'procedure_mgmt'},
+    emergency_dashboard: {g:'K', n:'Báo Động & Cấp Cứu', icon:'🚨', view:'emergency_dashboard'},
+    payroll: {g:'K', n:'Tính Công Ngoài Giờ', icon:'💰', view:'payroll'},
+    approval_hub: {g:'K', n:'Trung Tâm Phê Duyệt', icon:'✅', view:'approval_hub'},
+    ops_center: {g:'K', n:'Trung Tâm Vận Hành', icon:'🚀', view:'ops_center'},
   // ---- A. DASHBOARD (7) ----
+    my_workspace: {g:'A', n:'Góc Làm Việc', icon:'🏠', view:'my_workspace'},
   dash_executive:{g:'A',n:'Dashboard Lãnh đạo',icon:'📊',view:'dashboard'},
   dash_clinical:{g:'A',n:'Dashboard Chuyên môn',icon:'🩺',view:'dashboard'},
   dash_hr:{g:'A',n:'Dashboard Nhân sự',icon:'👥',view:'dashboard'},
@@ -221,15 +231,14 @@ const SCHEMA={
   dash_training:{g:'A',n:'Dashboard Đào tạo',icon:'🎓',view:'dashboard'},
   
   // ---- B. NHÂN SỰ (16) ----
-  staff:{g:'B',n:'Nhân sự',icon:'👤',f:[
-    {k:'empCode',l:'Mã NV',t:'text',r:1},{k:'fullName',l:'Họ tên',t:'text',r:1},
-    {k:'title',l:'Chức danh',t:'select',o:['BS','BSPK','KTV','ĐD','NV']},
-    {k:'role',l:'Vai trò',t:'select',o:['Bác sĩ CĐHA','KTV CĐHA','Điều dưỡng','Hành chính']},
-    {k:'group',l:'Nhóm CM',t:'select',o:['XQ','CT','MRI','SA','Can thiệp','Đa PT']},
-    {k:'contract',l:'Hợp đồng',t:'select',o:['Biên chế','HĐ dài hạn','HĐ ngắn hạn','Thỉnh giảng']},
-    {k:'fte',l:'FTE',t:'num'},{k:'joinDate',l:'Ngày vào',t:'date'},
-    {k:'status',l:'Trạng thái',t:'select',o:['Đang làm','Nghỉ phép','Thai sản','Đã nghỉ'],r:1}
-  ]},
+    leave_requests:{g:'B',n:'Đơn nghỉ phép',icon:'🌴',f:[
+      {k:'empCode',l:'Mã NV',t:'text',r:1},
+      {k:'type',l:'Loại nghỉ',t:'select',o:['Phép năm','Nghỉ bù','Ốm','Thai sản','Không lương']},
+      {k:'startDate',l:'Từ ngày',t:'date',r:1},{k:'endDate',l:'Đến ngày',t:'date',r:1},
+      {k:'reason',l:'Lý do',t:'textarea',full:1},
+      {k:'approvedBy',l:'Người duyệt',t:'text'},
+      {k:'status',l:'Trạng thái',t:'select',o:['Chờ duyệt','Đã duyệt','Từ chối']}
+    ]},
   staff_360:{g:'B',n:'Hồ sơ 360°',icon:'🔄',f:[
     {k:'empCode',l:'Mã NV',t:'text',r:1},
     {k:'summary',l:'Tổng hợp (đào tạo, khen thưởng, sự cố...)',t:'textarea',full:1}
@@ -243,14 +252,6 @@ const SCHEMA={
     {k:'role',l:'Vai trò',t:'select',o:['Chính','Phối hợp','Giám sát']},
     {k:'startDate',l:'Từ ngày',t:'date'},{k:'endDate',l:'Đến ngày',t:'date'},
     {k:'status',l:'Trạng thái',t:'select',o:['Chưa','Đang làm','Hoàn thành']}
-  ]},
-  leave_requests:{g:'B',n:'Đơn nghỉ phép',icon:'🌴',f:[
-    {k:'empCode',l:'Mã NV',t:'text',r:1},
-    {k:'type',l:'Loại nghỉ',t:'select',o:['Phép năm','Nghỉ bù','Ốm','Thai sản','Không lương']},
-    {k:'startDate',l:'Từ ngày',t:'date',r:1},{k:'endDate',l:'Đến ngày',t:'date',r:1},
-    {k:'reason',l:'Lý do',t:'textarea',full:1},
-    {k:'approvedBy',l:'Người duyệt',t:'text'},
-    {k:'status',l:'Trạng thái',t:'select',o:['Chờ duyệt','Đã duyệt','Từ chối']}
   ]},
   overtime:{g:'B',n:'Làm thêm ngoài giờ',icon:'⏰',f:[
     {k:'empCode',l:'Mã NV',t:'text',r:1},{k:'date',l:'Ngày',t:'date',r:1},
@@ -313,6 +314,7 @@ const SCHEMA={
   ]},
 
   // ---- C. CHUYÊN MÔN (12) ----
+    sedation_team: {g:'C', n:'Ekip Gây Mê (An Thần)', icon:'💤', view:'sedation_team'},
   daily_volumes:{g:'C',n:'Sản lượng ngày',icon:'📆',f:[
     {k:'date',l:'Ngày',t:'date',r:1},
     {k:'modality',l:'Phương thức',t:'select',o:['XQ','CT','MRI','SA','Điện tim']},
@@ -964,6 +966,14 @@ function route(k){
   else if(m.view==='settings')renderSettings();
   else if(m.view==='monthly_report')renderMonthlyReportView();
   else if(m.view==='calendar')       renderCalendar();
+      else if(m.view==='unified_calendar') renderUnifiedCalendar();
+      else if(m.view==='procedure_mgmt') renderProcedureMgmt();
+      else if(m.view==='sedation_team') renderSedationTeam();
+      else if(m.view==='emergency_dashboard') renderEmergencyDashboard();
+      else if(m.view==='payroll')   renderPayroll();
+      else if(m.view==='my_workspace')   renderMyWorkspace();
+      else if(m.view==='approval_hub')   renderApprovalHub();
+      else if(m.view==='ops_center') renderOpsCenter();
   else if(m.view==='cases')          renderCases();
   else if(m.view==='template')       renderTemplateLibrary();
   else if(m.view==='equipment_360')  renderEquipment360();
@@ -2987,5 +2997,1357 @@ async function doLogin(){
   saveDB(); audit('login','system',who.id,'Đăng nhập');
   await enterApp();
 }
-</script></body>
+</script>
+<!-- BẮT ĐẦU: TRUNG TÂM VẬN HÀNH (DÀNH CHO BÁC SĨ) -->
+<script>
+  function renderOpsCenter() {
+    if(!DB.data.appointments) DB.data.appointments = [];
+    if(!DB.data.tasks) DB.data.tasks = [];
+    if(!DB.data.inbox) DB.data.inbox = [];
+
+    let html = `<div class="page-head">
+      <div><h1>🚀 Trung Tâm Vận Hành</h1><div class="subtitle">Đặt lịch · Công việc · Hộp thư</div></div>
+    </div>
+    <div style="display:flex; gap:10px; margin-bottom:15px;">
+      <button class="btn btn-sm" onclick="switchOpsTab('appointments')">📅 Đặt Lịch Hẹn (${DB.data.appointments.length})</button>
+      <button class="btn-soft btn-sm" onclick="switchOpsTab('tasks')">📋 Công Việc (${DB.data.tasks.length})</button>
+      <button class="btn-soft btn-sm" onclick="switchOpsTab('inbox')">💬 Hộp Thư CSKH (${DB.data.inbox.length})</button>
+    </div>
+    <div id="ops-content"></div>`;
+
+    $('#view').innerHTML = html;
+    switchOpsTab('appointments');
+  }
+
+  function switchOpsTab(tab) {
+    const content = document.getElementById('ops-content');
+    const btns = document.querySelectorAll('.page-head + div button');
+    btns.forEach(b => { b.className = 'btn-soft btn-sm'; });
+    if(event) event.target.className = 'btn btn-sm';
+
+    if (tab === 'appointments') {
+      let rows = DB.data.appointments.filter(x => !x._deleted).map(a => `
+        <tr>
+          <td>${esc(a.date)}</td>
+          <td>${esc(a.time)}</td>
+          <td><b>${esc(a.patient)}</b></td>
+          <td>${esc(a.service)}</td>
+          <td><span class="badge ${a.status==='Đã xác nhận'?'good':'warn'}">${esc(a.status)}</span></td>
+          <td><button class="icon-btn" onclick="DB.data.appointments.find(x=>x.id==='${a.id}')._deleted=true; saveDB(); renderOpsCenter();">🗑️</button></td>
+        </tr>
+      `).join('');
+      content.innerHTML = `
+        <div class="card">
+          <div style="display:flex; justify-content:space-between; margin-bottom:15px;">
+            <h3 style="margin:0;">Danh sách lịch hẹn</h3>
+            <button class="btn btn-sm" onclick="addAppointment()">+ Thêm lịch hẹn</button>
+          </div>
+          <table class="table-wrap" style="width:100%;">
+            <thead><tr><th>Ngày</th><th>Giờ</th><th>Bệnh nhân</th><th>Dịch vụ</th><th>Trạng thái</th><th></th></tr></thead>
+            <tbody>${rows || '<tr><td colspan="6" class="empty">Chưa có lịch hẹn</td></tr>'}</tbody>
+          </table>
+        </div>`;
+    } 
+    else if (tab === 'tasks') {
+      const statuses = ['Cần làm', 'Đang làm', 'Hoàn thành'];
+      let kanban = `<div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:15px;">`;
+      statuses.forEach(status => {
+        const taskList = DB.data.tasks.filter(t => !t._deleted && t.status === status);
+        kanban += `<div class="card" style="background:var(--panel2); min-height:300px;">
+          <h3 style="text-align:center; color:var(--accent);">${status}</h3>
+          ${taskList.map(t => `<div style="background:#fff; padding:10px; border-radius:6px; margin-bottom:8px; border-left:3px solid var(--accent); box-shadow:var(--sh);">
+            <b>${esc(t.title)}</b>
+            <div style="font-size:11px; color:var(--muted); margin-top:5px;">PIC: ${esc(t.owner)}</div>
+            <div style="margin-top:8px; display:flex; gap:5px; justify-content:flex-end;">
+              ${status !== 'Cần làm' ? `<button class="btn-soft btn-sm" onclick="moveTask('${t.id}', -1)">◀</button>` : ''}
+              ${status !== 'Hoàn thành' ? `<button class="btn-soft btn-sm" onclick="moveTask('${t.id}', 1)">▶</button>` : ''}
+            </div>
+          </div>`).join('')}
+          <button class="btn-soft btn-sm" style="width:100%; margin-top:10px;" onclick="addTask('${status}')">+ Thêm</button>
+        </div>`;
+      });
+      kanban += `</div>`;
+      content.innerHTML = kanban;
+    }
+    else if (tab === 'inbox') {
+      let msgs = DB.data.inbox.filter(x => !x._deleted).map(m => `
+        <div style="padding:10px; border-bottom:1px solid var(--line); display:flex; gap:10px; align-items:flex-start;">
+          <div style="background:var(--accent); color:#fff; border-radius:50%; width:30px; height:30px; text-align:center; line-height:30px; font-weight:bold;">P</div>
+          <div style="flex:1;">
+            <b style="font-size:12px;">Phụ huynh (${new Date(m.ts).toLocaleTimeString('vi-VN')})</b>
+            <div style="font-size:13px; margin-top:3px;">${esc(m.text)}</div>
+          </div>
+          <button class="btn-soft btn-sm" onclick="DB.data.inbox.find(x=>x.id==='${m.id}')._deleted=true; saveDB(); renderOpsCenter();">Đã xử lý</button>
+        </div>
+      `).join('');
+      content.innerHTML = `
+        <div class="card">
+          <div style="display:flex; justify-content:space-between; margin-bottom:15px;">
+            <h3 style="margin:0;">Hộp thư hỗ trợ</h3>
+            <button class="btn btn-sm" onclick="addInboxMessage()">+ Tin nhắn mới</button>
+          </div>
+          <div style="max-height:400px; overflow-y:auto;">
+            ${msgs || '<div class="empty">Không có tin nhắn nào.</div>'}
+          </div>
+        </div>`;
+    }
+  }
+
+  // Hàm mở Form nhập lịch hẹn
+  function addAppointment() {
+    $('#dlg-title').textContent = '📅 Thêm Lịch Hẹn Mới';
+    $('#dlg-body').innerHTML = `
+      <div class="form-group full">
+        <label>Tên Bệnh Nhân *</label>
+        <input type="text" id="app-patient" placeholder="VD: Nguyễn Văn A">
+      </div>
+      <div class="form-group">
+        <label>Ngày hẹn</label>
+        <input type="date" id="app-date" value="${localDate()}">
+      </div>
+      <div class="form-group">
+        <label>Giờ hẹn</label>
+        <input type="time" id="app-time" value="08:00">
+      </div>
+      <div class="form-group full">
+        <label>Dịch vụ / Phương thức</label>
+        <select id="app-service">
+          <option>Chụp X-quang (XQ)</option>
+          <option>Chụp Cắt lớp (CT)</option>
+          <option>Chụp Cộng hưởng từ (MRI)</option>
+          <option>Siêu âm (SA)</option>
+        </select>
+      </div>
+      <div class="form-group full">
+        <label>Ghi chú thêm</label>
+        <textarea id="app-note" rows="2" placeholder="VD: Bé cần nhịn ăn, có tiền sử dị ứng..."></textarea>
+      </div>
+    `;
+    $('#dlg-foot').innerHTML = `
+      <button type="button" class="btn-soft" onclick="closeDlg()">Hủy</button>
+      <button type="button" class="btn" onclick="saveAppointment()">💾 Lưu Lịch Hẹn</button>
+    `;
+    $('#dlg').showModal();
+  }
+
+  // Hàm lưu dữ liệu từ Form
+  function saveAppointment() {
+    const patient = $('#app-patient').value.trim();
+    if (!patient) { toast('Vui lòng nhập tên bệnh nhân'); return; }
+    
+    DB.data.appointments.push({
+      id: uid(),
+      patient: patient,
+      date: $('#app-date').value,
+      time: $('#app-time').value,
+      service: $('#app-service').value,
+      note: $('#app-note').value.trim(),
+      status: 'Chờ xác nhận',
+      createdAt: Date.now()
+    });
+    
+    saveDB();
+    closeDlg();
+    renderOpsCenter();
+    toast('Đã lưu lịch hẹn thành công');
+  }
+
+  // --- FORM THÊM CÔNG VIỆC ---
+  function addTask(status) {
+    $('#dlg-title').textContent = '📋 Thêm Công Việc Mới';
+    let staffOptions = (DB.data.staff || []).map(s => `<option value="${esc(s.fullName)}">${esc(s.fullName)}</option>`).join('');
+    
+    $('#dlg-body').innerHTML = `
+      <div class="form-group full">
+        <label>Tên công việc *</label>
+        <input type="text" id="task-title" placeholder="VD: Kiểm tra máy MRI, Họp giao ban...">
+      </div>
+      <div class="form-group">
+        <label>Người phụ trách (PIC)</label>
+        <select id="task-owner">
+          <option value="${esc(CURRENT.name)}">${esc(CURRENT.name)} (Tôi)</option>
+          ${staffOptions}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Trạng thái</label>
+        <input type="text" id="task-status" value="${esc(status)}" readonly style="background:#e2e8f0">
+      </div>
+      <div class="form-group full">
+        <label>Mô tả chi tiết</label>
+        <textarea id="task-desc" rows="3" placeholder="Mô tả các bước cần làm..."></textarea>
+      </div>
+    `;
+    $('#dlg-foot').innerHTML = `
+      <button type="button" class="btn-soft" onclick="closeDlg()">Hủy</button>
+      <button type="button" class="btn" onclick="saveTask()">💾 Lưu Công Việc</button>
+    `;
+    $('#dlg').showModal();
+  }
+
+  function saveTask() {
+    const title = $('#task-title').value.trim();
+    if (!title) { toast('Vui lòng nhập tên công việc'); return; }
+    
+    DB.data.tasks.push({
+      id: uid(),
+      title: title,
+      owner: $('#task-owner').value,
+      status: $('#task-status').value,
+      desc: $('#task-desc').value.trim(),
+      createdAt: Date.now()
+    });
+    saveDB(); closeDlg(); renderOpsCenter(); switchOpsTab('tasks'); 
+    toast('Đã thêm công việc');
+  }
+
+  // --- FORM THÊM TIN NHẮN CSKH ---
+  function addInboxMessage() {
+    $('#dlg-title').textContent = '💬 Thêm Tin Nhắn (Giả lập)';
+    $('#dlg-body').innerHTML = `
+      <div class="form-group full">
+        <label>Người gửi</label>
+        <input type="text" id="inbox-sender" value="Phụ huynh bệnh nhi">
+      </div>
+      <div class="form-group full">
+        <label>Nội dung tin nhắn *</label>
+        <textarea id="inbox-text" rows="4" placeholder="VD: Bé nhà tôi chụp XQ lúc 9h có cần nhịn ăn không?"></textarea>
+      </div>
+    `;
+    $('#dlg-foot').innerHTML = `
+      <button type="button" class="btn-soft" onclick="closeDlg()">Hủy</button>
+      <button type="button" class="btn" onclick="saveInboxMessage()">💾 Lưu Tin Nhắn</button>
+    `;
+    $('#dlg').showModal();
+  }
+
+  function saveInboxMessage() {
+    const text = $('#inbox-text').value.trim();
+    if (!text) { toast('Vui lòng nhập nội dung tin nhắn'); return; }
+    
+    DB.data.inbox.push({
+      id: uid(),
+      sender: $('#inbox-sender').value.trim(),
+      text: text,
+      ts: Date.now()
+    });
+    saveDB(); closeDlg(); renderOpsCenter(); switchOpsTab('inbox');
+    toast('Đã thêm tin nhắn');
+  }
+
+  function moveTask(id, dir) {
+    const statuses = ['Cần làm', 'Đang làm', 'Hoàn thành'];
+    const task = DB.data.tasks.find(t => t.id === id);
+    if(!task) return;
+    let idx = statuses.indexOf(task.status) + dir;
+    if(idx >= 0 && idx < statuses.length) {
+      task.status = statuses[idx];
+      saveDB(); renderOpsCenter();
+    }
+  }
+
+  function addInboxMessage() {
+    const m = prompt("Nhập nội dung tin nhắn:");
+    if(!m) return;
+    DB.data.inbox.push({ id: uid(), text: m, ts: Date.now() });
+    saveDB(); renderOpsCenter(); toast('Đã nhận tin nhắn');
+  }
+</script>
+  <!-- ================================================== -->
+<!-- MODULE: QUẢN LÝ NGHỈ PHÉP (LEAVE MANAGEMENT) -->
+<!-- ================================================== -->
+<script>
+  // 1. Hàm tính số dư phép (Mặc định 12 ngày/năm)
+  function getLeaveBalance(empCode) {
+    if(!DB.data.leave_balances) DB.data.leave_balances = {};
+    // Nếu nhân viên chưa có trong sổ, tự động cấp 12 ngày
+    if(DB.data.leave_balances[empCode] === undefined) {
+      DB.data.leave_balances[empCode] = 20;
+    }
+    return DB.data.leave_balances[empCode];
+  }
+
+  // 2. Hàm vẽ giao diện chính
+ <script>
+<!-- BẮT ĐẦU: CẢM BIẾN SỐ DƯ PHÉP (KHÔNG ĐỔI GIAO DIỆN) -->
+<script>
+  // Đợi hệ thống tải xong mới can thiệp
+  setTimeout(() => {
+    // Lưu lại hàm saveForm gốc của V5
+    const originalSaveForm = window.saveForm;
+    
+    // Ghi đè hàm saveForm: Chỉ can thiệp khi lưu Đơn nghỉ phép
+    window.saveForm = function(key, id) {
+      if (key === 'leave_requests') {
+        // Lấy dữ liệu từ form gốc của V5
+        const empCode = document.querySelector('[data-k="empCode"]').value;
+        const type = document.querySelector('[data-k="type"]').value;
+        const start = document.querySelector('[data-k="startDate"]').value;
+        const end = document.querySelector('[data-k="endDate"]').value;
+
+        if (start && end) {
+          const days = Math.ceil((new Date(end) - new Date(start)) / (1000 * 60 * 60 * 24)) + 1;
+          
+          // Khởi tạo quỹ phép nếu chưa có
+          if (!DB.data.leave_balances) DB.data.leave_balances = {};
+          if (DB.data.leave_balances[empCode] === undefined) DB.data.leave_balances[empCode] = 12;
+
+          if (type === 'Phép năm' && !id) { // Chỉ check khi tạo mới
+            if (days > DB.data.leave_balances[empCode]) {
+              alert("LỖI: Nhân viên " + empCode + " chỉ còn " + DB.data.leave_balances[empCode] + " ngày phép, không thể xin " + days + " ngày!");
+              return; // Dừng lại, không lưu
+            }
+            // Nếu hợp lệ, trừ quỹ phép
+            DB.data.leave_balances[empCode] -= days;
+            toast("Đã trừ " + days + " ngày phép. Số dư còn: " + DB.data.leave_balances[empCode] + " ngày.");
+          }
+        }
+      }
+      // Gọi hàm lưu gốc của V5
+      originalSaveForm(key, id);
+    };
+  }, 1000);
+</script>
+<!-- ================================================== -->
+<!-- ANTHROPIC SKILL: PREMIUM MEDICAL UI OVERRIDE       -->
+<!-- ================================================== -->
+<style>
+  /* 1. Tối ưu Font chữ và Màu nền tổng thể */
+  :root {
+    --bg: #f4f7f9; /* Xám xanh nhạt, dịu mắt */
+    --panel: #ffffff;
+    --ink: #1e293b;
+    --line: #e2e8f0;
+    --accent: #0ea5e9; /* Xanh y tế (Medical Teal) */
+    --accent2: #0284c7;
+    --soft: #f0f9ff;
+    --sh: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+    --shlg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  }
+
+  body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+  /* 2. Nâng cấp thanh Header (Hiệu ứng kính mờ - Glassmorphism) */
+  header.top {
+    background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+  }
+
+  /* 3. Nâng cấp thanh Menu trái */
+  nav { box-shadow: 2px 0 10px rgba(0,0,0,0.02); border-right: none; }
+  nav .nav-item { border-radius: 8px; transition: all 0.2s ease; }
+  nav .nav-item:hover { background: var(--soft); transform: translateX(4px); }
+  nav .nav-item.on { background: #e0f2fe; color: var(--accent2); }
+
+  /* 4. Nâng cấp Thẻ (Cards) và Bảng (Tables) */
+  .card, .tile, .table-wrap {
+    border: 1px solid rgba(226, 232, 240, 0.6);
+    box-shadow: var(--sh);
+    border-radius: 12px; /* Bo góc mềm mại */
+    background: #ffffff;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .card:hover { box-shadow: var(--shlg); transform: translateY(-2px); }
+
+  th {
+    background: #f8fafc;
+    color: #475569;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    border-bottom: 2px solid #e2e8f0;
+  }
+  tr:hover td { background: #f8fafc; }
+
+  /* 5. Nâng cấp Nút bấm (Buttons) - Phong cách hiện đại */
+  .btn, .btn-soft, .btn-danger {
+    border-radius: 8px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    transition: all 0.2s;
+    padding: 8px 16px;
+  }
+  .btn { background: var(--accent); box-shadow: 0 2px 4px rgba(14, 165, 233, 0.3); }
+  .btn:hover { background: var(--accent2); transform: translateY(-1px); box-shadow: 0 4px 6px rgba(14, 165, 233, 0.4); }
+
+  /* 6. Nâng cấp Form nhập liệu */
+  input, select, textarea {
+    border-radius: 8px;
+    border: 1px solid #cbd5e1;
+    padding: 10px 12px;
+    transition: all 0.2s;
+    background: #f8fafc;
+  }
+  input:focus, select:focus, textarea:focus {
+    background: #ffffff;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.15);
+    outline: none;
+  }
+
+  /* 7. Nâng cấp Dialog (Hộp thoại) */
+  dialog { border-radius: 16px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); }
+  .dialog-head { background: #f8fafc; border-bottom: 1px solid var(--line); padding: 16px 24px; }
+  .dialog-foot { background: #f8fafc; border-top: 1px solid var(--line); padding: 16px 24px; }
+</style>
+<!-- ================================================== -->
+<!-- MODULE: TRUNG TÂM PHÊ DUYỆT (APPROVAL HUB)         -->
+<!-- ================================================== -->
+<script>
+  function renderApprovalHub() {
+    if(!can('dashboard', 'r')) return; // Chỉ Admin/Trưởng khoa mới được vào
+
+    // 1. Quét tất cả các module để tìm những thứ đang "Chờ duyệt"
+    const pendingLeaves = (DB.data.leave_requests || []).filter(x => !x._deleted && x.status === 'Chờ duyệt');
+    // (Sau này có thể thêm: pendingOvertime, pendingRepairs...)
+
+    const totalPending = pendingLeaves.length;
+
+    let rows = pendingLeaves.map(l => `
+      <tr>
+        <td><span class="badge info">Nghỉ phép</span></td>
+        <td><b>${esc(l.empName || l.empCode)}</b></td>
+        <td>${esc(l.type)}</td>
+        <td>${fmtDate(l.startDate)} ➔ ${fmtDate(l.endDate)}</td>
+        <td>${esc(l.reason || '')}</td>
+        <td>
+          <button class="btn btn-sm" style="background:var(--good); color:white; border:0; padding:4px 10px; border-radius:4px; cursor:pointer; margin-right:5px;" 
+                  onclick="quickApprove('leave_requests', '${l.id}')">✓ Duyệt</button>
+          <button class="btn-soft btn-sm" style="color:var(--bad); border-color:var(--bad); padding:4px 10px; border-radius:4px; cursor:pointer;" 
+                  onclick="quickReject('leave_requests', '${l.id}')">✕ Từ chối</button>
+        </td>
+      </tr>
+    `).join('');
+
+    let html = `
+      <div class="page-head">
+        <div>
+          <h1>✅ Trung Tâm Phê Duyệt</h1>
+          <div class="subtitle">Tổng hợp các yêu cầu đang chờ bạn xử lý</div>
+        </div>
+        <div class="tile" style="background:var(--soft); border-color:var(--accent); padding:10px 20px;">
+          <small>Đang chờ duyệt</small>
+          <strong style="color:var(--accent); font-size:24px;">${totalPending}</strong>
+        </div>
+      </div>
+      
+      <div class="card">
+        <h3>Danh sách yêu cầu</h3>
+        <div class="table-wrap" style="margin-top:10px;">
+          <table>
+            <thead>
+              <tr>
+                <th>Loại yêu cầu</th><th>Nhân viên</th><th>Chi tiết</th><th>Thời gian</th><th>Lý do</th><th>Thao tác</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${totalPending > 0 ? rows : '<tr><td colspan="6" class="empty">Tuyệt vời! Không có yêu cầu nào đang chờ duyệt.</td></tr>'}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+    
+    $('#view').innerHTML = html;
+  }
+
+  // Hàm xử lý Duyệt nhanh
+  function quickApprove(module, id) {
+    if(!confirm('Xác nhận DUYỆT yêu cầu này?')) return;
+    const item = DB.data[module].find(x => x.id === id);
+    if(item) {
+      item.status = 'Đã duyệt';
+      item.approvedBy = CURRENT.name; // Ghi nhận người duyệt
+      item.updatedAt = Date.now();
+      
+      audit('update', module, id, 'Duyệt nhanh từ Trung Tâm');
+      saveDB();
+      renderApprovalHub(); // Load lại giao diện
+      toast('Đã duyệt thành công!');
+    }
+  }
+
+  // Hàm xử lý Từ chối
+  function quickReject(module, id) {
+    if(!confirm('Xác nhận TỪ CHỐI yêu cầu này?')) return;
+    const item = DB.data[module].find(x => x.id === id);
+    if(item) {
+      item.status = 'Từ chối';
+      item.approvedBy = CURRENT.name;
+      item.updatedAt = Date.now();
+      
+      audit('update', module, id, 'Từ chối từ Trung Tâm');
+      saveDB();
+      renderApprovalHub();
+      toast('Đã từ chối yêu cầu.');
+    }
+  }
+</script>
+<!-- ================================================== -->
+<!-- MODULE: GÓC LÀM VIỆC CÁ NHÂN (MY WORKSPACE)        -->
+<!-- ================================================== -->
+<script>
+  function renderMyWorkspace() {
+    if(!CURRENT) return;
+
+    // 1. Lấy dữ liệu cá nhân
+    const myName = CURRENT.name || CURRENT.username;
+    const myCode = CURRENT.username;
+    
+    // Lấy số dư phép (Mặc định 12 nếu chưa có)
+    if(!DB.data.leave_balances) DB.data.leave_balances = {};
+    if(DB.data.leave_balances[myCode] === undefined) DB.data.leave_balances[myCode] = 12;
+    const myBalance = DB.data.leave_balances[myCode];
+
+    // Lấy đơn nghỉ phép của cá nhân
+    const myLeaves = (DB.data.leave_requests || [])
+      .filter(x => !x._deleted && (x.empCode === myCode || x.empName === myName))
+      .reverse().slice(0, 5); // Chỉ lấy 5 đơn gần nhất
+
+    const today = new Date();
+    const dateStr = today.toLocaleDateString('vi-VN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+    // 2. Vẽ giao diện
+    let html = `
+      <div class="page-head">
+        <div>
+          <h1>🏠 Góc Làm Việc Của Tôi</h1>
+          <div class="subtitle" style="text-transform: capitalize;">${dateStr}</div>
+        </div>
+      </div>
+
+      <!-- Thẻ thông tin nhanh -->
+      <div class="tiles" style="grid-template-columns: repeat(3, 1fr); margin-bottom: 20px;">
+        <div class="tile" style="background: linear-gradient(135deg, #e0f2fe, #bae6fd); border: none;">
+          <small style="color: #0369a1;">Xin chào,</small>
+          <strong style="color: #0284c7; font-size: 20px; margin-top: 5px;">${esc(myName)}</strong>
+          <div class="sub" style="color: #0369a1;">Chúc bạn một ngày làm việc hiệu quả!</div>
+        </div>
+        
+        <div class="tile">
+          <small>Số dư phép năm</small>
+          <strong style="color: var(--good); font-size: 28px;">${myBalance} <span style="font-size:14px; color:var(--muted); font-weight:normal;">ngày</span></strong>
+          <div class="sub">Cập nhật tự động</div>
+        </div>
+
+        <div class="tile" style="display:flex; flex-direction:column; justify-content:center; align-items:center;">
+          <button class="btn" onclick="route('leave_requests'); setTimeout(()=>openForm('leave_requests', null), 100);" style="width:100%;">
+            + Tạo Đơn Nghỉ Phép
+          </button>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px;">
+        <!-- Bảng đơn nghỉ phép gần đây -->
+        <div class="card" style="margin-bottom: 0;">
+          <h3>Đơn xin nghỉ gần đây của tôi</h3>
+          <div class="table-wrap" style="margin-top: 10px;">
+            <table>
+              <thead>
+                <tr><th>Loại nghỉ</th><th>Từ ngày</th><th>Đến ngày</th><th>Trạng thái</th></tr>
+              </thead>
+              <tbody>
+                ${myLeaves.length > 0 ? myLeaves.map(l => {
+                  const statusColor = l.status === 'Đã duyệt' ? 'good' : l.status === 'Từ chối' ? 'bad' : 'warn';
+                  return `
+                    <tr>
+                      <td><span class="badge info">${esc(l.type)}</span></td>
+                      <td>${fmtDate(l.startDate)}</td>
+                      <td>${fmtDate(l.endDate)}</td>
+                      <td><span class="badge ${statusColor}">${esc(l.status)}</span></td>
+                    </tr>
+                  `;
+                }).join('') : '<tr><td colspan="4" class="empty">Bạn chưa có đơn nghỉ phép nào.</td></tr>'}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Cột phím tắt / thông báo -->
+        <div class="card" style="margin-bottom: 0; background: var(--panel2);">
+          <h3>Phím tắt nhanh</h3>
+          <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 10px;">
+            <button class="btn-soft" style="text-align:left; padding: 12px;" onclick="route('duty_month')">📆 Xem lịch trực tháng</button>
+            <button class="btn-soft" style="text-align:left; padding: 12px;" onclick="route('roster_doctor')">🩺 Lịch làm việc tuần</button>
+            <button class="btn-soft" style="text-align:left; padding: 12px;" onclick="route('staff')">👤 Hồ sơ nhân sự</button>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    $('#view').innerHTML = html;
+  }
+</script>
+<!-- ================================================== -->
+<!-- MODULE: BẢNG TÍNH CÔNG NGOÀI GIỜ (PAYROLL)         -->
+<!-- ================================================== -->
+<script>
+  // Cấu hình đơn giá và hệ số (Có thể sửa ở đây)
+  const PAYROLL_CONFIG = {
+    baseRate: 200000, // Đơn giá 1 giờ cơ bản (VNĐ)
+    multipliers: {
+      'Trực ngày': 1.0,
+      'Trực đêm (22h-6h)': 1.3,
+      'Trực lễ/Chủ nhật': 2.0
+    }
+  };
+
+  function renderPayroll() {
+    if(!can('dashboard', 'r')) return; // Chỉ Admin/Trưởng khoa
+
+    if(!DB.data.payroll_records) DB.data.payroll_records = [];
+    
+    const records = DB.data.payroll_records.filter(x => !x._deleted).reverse();
+    const totalAmount = records.reduce((sum, r) => sum + (r.totalAmount || 0), 0);
+
+    let rows = records.map(r => `
+      <tr>
+        <td>${fmtDate(r.date)}</td>
+        <td><b>${esc(r.empName)}</b></td>
+        <td><span class="badge info">${esc(r.shiftType)}</span></td>
+        <td style="text-align:center;">${r.hours}</td>
+        <td style="text-align:right;">${fmtNum(r.rate)} đ</td>
+        <td style="text-align:right; font-weight:bold; color:var(--accent);">${fmtNum(r.totalAmount)} đ</td>
+        <td><button class="icon-btn" onclick="delPayroll('${r.id}')">🗑️</button></td>
+      </tr>
+    `).join('');
+
+    let html = `
+      <div class="page-head">
+        <div>
+          <h1>💰 Bảng Tính Công Ngoài Giờ</h1>
+          <div class="subtitle">Quản lý thù lao trực đêm, trực lễ (P0)</div>
+        </div>
+        <button class="btn" onclick="openPayrollForm()">+ Thêm Ca Trực</button>
+      </div>
+
+      <div class="tiles" style="grid-template-columns: repeat(3, 1fr); margin-bottom: 20px;">
+        <div class="tile">
+          <small>Tổng số ca đã nhập</small>
+          <strong>${records.length}</strong>
+        </div>
+        <div class="tile">
+          <small>Đơn giá cơ bản (1 giờ)</small>
+          <strong style="color:var(--warn); font-size:22px;">${fmtNum(PAYROLL_CONFIG.baseRate)} đ</strong>
+        </div>
+        <div class="tile" style="background:linear-gradient(135deg, #dcfce7, #bbf7d0); border:none;">
+          <small style="color:#166534;">Tổng tiền phải trả</small>
+          <strong style="color:#15803d; font-size:24px;">${fmtNum(totalAmount)} đ</strong>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Chi tiết thanh toán</h3>
+        <div class="table-wrap" style="margin-top: 10px;">
+          <table>
+            <thead>
+              <tr><th>Ngày</th><th>Nhân viên</th><th>Loại ca</th><th style="text-align:center;">Số giờ</th><th style="text-align:right;">Đơn giá/giờ</th><th style="text-align:right;">Thành tiền</th><th></th></tr>
+            </thead>
+            <tbody>
+              ${records.length > 0 ? rows : '<tr><td colspan="7" class="empty">Chưa có dữ liệu ca trực.</td></tr>'}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+    $('#view').innerHTML = html;
+  }
+
+  function openPayrollForm() {
+    const staffOptions = (DB.data.staff || []).map(s => `<option value="${esc(s.fullName)}">${esc(s.fullName)}</option>`).join('');
+    
+    $('#dlg-title').textContent = '💰 Thêm Ca Trực Tính Lương';
+    $('#dlg-body').innerHTML = `
+      <div class="form-group full">
+        <label>Nhân viên *</label>
+        <select id="pay-emp">${staffOptions}</select>
+      </div>
+      <div class="form-group">
+        <label>Ngày trực *</label>
+        <input type="date" id="pay-date" value="${localDate()}">
+      </div>
+      <div class="form-group">
+        <label>Loại ca trực</label>
+        <select id="pay-type" onchange="updatePayRate()">
+          <option value="Trực ngày">Trực ngày (Hệ số x1.0)</option>
+          <option value="Trực đêm (22h-6h)">Trực đêm (Hệ số x1.3)</option>
+          <option value="Trực lễ/Chủ nhật">Trực lễ/Chủ nhật (Hệ số x2.0)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Số giờ trực *</label>
+        <input type="number" id="pay-hours" value="8" min="1" oninput="updatePayRate()">
+      </div>
+      <div class="form-group full" style="background:var(--soft); padding:15px; border-radius:8px; text-align:center;">
+        <label style="color:var(--accent); font-size:14px; margin-bottom:5px;">Thành tiền dự kiến</label>
+        <div id="pay-preview" style="font-size:24px; font-weight:bold; color:var(--accent2);">0 đ</div>
+      </div>
+    `;
+    $('#dlg-foot').innerHTML = `
+      <button type="button" class="btn-soft" onclick="closeDlg()">Hủy</button>
+      <button type="button" class="btn" onclick="savePayroll()">💾 Lưu Ca Trực</button>
+    `;
+    $('#dlg').showModal();
+    updatePayRate(); // Cập nhật giá tiền lần đầu
+  }
+
+  function updatePayRate() {
+    const type = document.getElementById('pay-type').value;
+    const hours = Number(document.getElementById('pay-hours').value) || 0;
+    const multiplier = PAYROLL_CONFIG.multipliers[type] || 1;
+    const total = PAYROLL_CONFIG.baseRate * multiplier * hours;
+    
+    document.getElementById('pay-preview').innerText = fmtNum(total) + ' đ';
+  }
+
+  function savePayroll() {
+    const empName = document.getElementById('pay-emp').value;
+    const date = document.getElementById('pay-date').value;
+    const type = document.getElementById('pay-type').value;
+    const hours = Number(document.getElementById('pay-hours').value);
+    
+    if(!empName || !date || hours <= 0) { toast('Vui lòng nhập đủ thông tin'); return; }
+
+    const multiplier = PAYROLL_CONFIG.multipliers[type] || 1;
+    const rate = PAYROLL_CONFIG.baseRate * multiplier;
+    const totalAmount = rate * hours;
+
+    DB.data.payroll_records.push({
+      id: uid(), empName, date, shiftType: type, hours, rate, totalAmount, createdAt: Date.now()
+    });
+    
+    saveDB(); closeDlg(); renderPayroll(); toast('Đã lưu ca trực');
+  }
+
+  function delPayroll(id) {
+    if(!confirm('Xóa ca trực này?')) return;
+    const r = DB.data.payroll_records.find(x => x.id === id);
+    if(r) { r._deleted = true; r.updatedAt = Date.now(); }
+    saveDB(); renderPayroll(); toast('Đã xóa');
+  }
+</script>
+<!-- ================================================== -->
+<!-- MODULE: TÌM KIẾM TOÀN CẦU (GLOBAL SEARCH - P0)     -->
+<!-- ================================================== -->
+<script>
+  // Tự động chèn nút Tìm kiếm lên thanh Header khi trang tải xong
+  setTimeout(() => {
+    const headerActions = document.querySelector('header.top .actions');
+    if (headerActions && !document.getElementById('btn-global-search')) {
+      const searchBtn = document.createElement('button');
+      searchBtn.id = 'btn-global-search';
+      searchBtn.className = 'btn-soft btn-sm';
+      searchBtn.innerHTML = '🔍 Tìm kiếm';
+      searchBtn.onclick = openGlobalSearch;
+      // Chèn vào trước nút Backup
+      headerActions.insertBefore(searchBtn, headerActions.querySelector('.btn-soft'));
+    }
+  }, 1000);
+
+  function openGlobalSearch() {
+    $('#dlg-title').textContent = '🔍 Tìm kiếm Toàn cầu';
+    $('#dlg-body').innerHTML = `
+      <div class="form-group full">
+        <input type="text" id="global-search-input" placeholder="Gõ tên nhân viên, tên bệnh nhân, lý do nghỉ, công việc..." autocomplete="off">
+      </div>
+      <div class="full" id="global-search-results" style="max-height: 400px; overflow-y: auto; margin-top: 10px;">
+        <div class="empty">Nhập ít nhất 2 ký tự để bắt đầu tìm kiếm trên toàn hệ thống...</div>
+      </div>
+    `;
+    $('#dlg-foot').innerHTML = `<button class="btn-soft" onclick="closeDlg()">Đóng</button>`;
+    $('#dlg').showModal();
+    
+    // Tự động focus vào ô nhập liệu
+    setTimeout(() => { document.getElementById('global-search-input').focus(); }, 100);
+
+    // Lắng nghe sự kiện gõ phím
+    document.getElementById('global-search-input').oninput = (e) => {
+      const q = e.target.value.toLowerCase().trim();
+      if (q.length < 2) {
+        document.getElementById('global-search-results').innerHTML = '<div class="empty">Nhập ít nhất 2 ký tự...</div>';
+        return;
+      }
+      executeGlobalSearch(q);
+    };
+  }
+
+  function executeGlobalSearch(q) {
+    let results = [];
+    // Khai báo các module sẽ được quét
+    const searchModules = {
+      'staff': { name: 'Nhân sự', icon: '👤' },
+      'leave_requests': { name: 'Nghỉ phép', icon: '🌴' },
+      'appointments': { name: 'Lịch hẹn', icon: '📅' },
+      'tasks': { name: 'Công việc', icon: '📋' }
+    };
+    
+    // Quét dữ liệu
+    for (const [mod, info] of Object.entries(searchModules)) {
+      if(!DB.data[mod]) continue;
+      
+      DB.data[mod].filter(x => !x._deleted).forEach(item => {
+        const str = JSON.stringify(item).toLowerCase();
+        if(str.includes(q)) {
+          let display = '';
+          if(mod === 'staff') display = `<b>${esc(item.fullName)}</b> (Mã: ${esc(item.empCode)}) - ${esc(item.role)}`;
+          else if(mod === 'leave_requests') display = `<b>${esc(item.empName || item.empCode)}</b> xin <span class="badge info">${esc(item.type)}</span> từ ${esc(item.startDate)} đến ${esc(item.endDate)}`;
+          else if(mod === 'appointments') display = `<b>${esc(item.patient)}</b> - ${esc(item.service)} (${esc(item.date)} ${esc(item.time)})`;
+          else if(mod === 'tasks') display = `<b>${esc(item.title)}</b> - PIC: ${esc(item.owner)}`;
+          
+          results.push({ mod, name: info.name, icon: info.icon, display });
+        }
+      });
+    }
+
+    const resDiv = document.getElementById('global-search-results');
+    if(results.length === 0) {
+      resDiv.innerHTML = '<div class="empty">Không tìm thấy kết quả nào phù hợp.</div>';
+      return;
+    }
+
+    // Hiển thị kết quả
+    resDiv.innerHTML = results.map(r => `
+      <div style="padding: 12px; border-bottom: 1px solid var(--line); display: flex; gap: 15px; align-items: center; transition: background 0.2s;" onmouseover="this.style.background='var(--soft)'" onmouseout="this.style.background='transparent'">
+        <div style="font-size: 24px;">${r.icon}</div>
+        <div style="flex: 1;">
+          <div style="font-size: 11px; color: var(--muted); text-transform: uppercase; font-weight: bold; margin-bottom: 2px;">${r.name}</div>
+          <div style="font-size: 14px;">${r.display}</div>
+        </div>
+      </div>
+    `).join('');
+  }
+</script>
+<!-- ================================================== -->
+<!-- MODULE: NOTIFICATION & EMERGENCY (P0: 3, 4, 16)    -->
+<!-- ================================================== -->
+<script>
+  // 1. Khởi tạo bộ nhớ thông báo
+  if(!DB.data.notifications) DB.data.notifications = [];
+  if(!DB.data.emergency_alerts) DB.data.emergency_alerts = [];
+
+  // 2. Tự động chèn Chuông thông báo lên Header
+  setTimeout(() => {
+    const headerActions = document.querySelector('header.top .actions');
+    if (headerActions && !document.getElementById('notif-bell')) {
+      const bell = document.createElement('button');
+      bell.id = 'notif-bell';
+      bell.className = 'btn-soft btn-sm';
+      bell.style.position = 'relative';
+      bell.innerHTML = '🔔 <span id="notif-count" style="background:var(--bad);color:white;padding:2px 6px;border-radius:10px;font-size:10px;margin-left:5px;display:none;">0</span>';
+      bell.onclick = openNotifications;
+      headerActions.insertBefore(bell, headerActions.firstChild);
+      updateBellIcon();
+    }
+  }, 1500);
+
+  function updateBellIcon() {
+    const unread = DB.data.notifications.filter(n => !n.read).length;
+    const countEl = document.getElementById('notif-count');
+    if(countEl) {
+      countEl.innerText = unread;
+      countEl.style.display = unread > 0 ? 'inline-block' : 'none';
+    }
+  }
+
+  function openNotifications() {
+    // Đánh dấu đã đọc
+    DB.data.notifications.forEach(n => n.read = true);
+    saveDB();
+    updateBellIcon();
+
+    $('#dlg-title').textContent = '🔔 Trung Tâm Thông Báo';
+    let html = DB.data.notifications.slice(0, 20).map(n => `
+      <div style="padding:12px; border-bottom:1px solid var(--line); display:flex; gap:10px;">
+        <div style="font-size:24px;">${n.title.includes('BÁO ĐỘNG') ? '🚨' : '📌'}</div>
+        <div style="flex:1;">
+          <b style="font-size:13px; color:${n.title.includes('BÁO ĐỘNG') ? 'var(--bad)' : 'var(--ink)'};">${esc(n.title)}</b>
+          <div style="font-size:13px; color:var(--ink); margin-top:2px;">${esc(n.msg)}</div>
+          <div style="font-size:10px; color:var(--muted); margin-top:6px;">${new Date(n.ts).toLocaleString('vi-VN')}</div>
+        </div>
+      </div>
+    `).join('');
+    $('#dlg-body').innerHTML = `<div class="full" style="max-height:400px; overflow-y:auto;">${html || '<div class="empty">Không có thông báo nào.</div>'}</div>`;
+    $('#dlg-foot').innerHTML = `<button class="btn-soft" onclick="closeDlg()">Đóng</button>`;
+    $('#dlg').showModal();
+  }
+
+  // Hàm kích hoạt thông báo (sẽ dùng cho các module khác)
+  window.addNotification = function(title, msg) {
+    DB.data.notifications.unshift({ id: uid(), title, msg, ts: Date.now(), read: false });
+    saveDB();
+    updateBellIcon();
+  }
+
+  // 3. Giao diện Báo động đỏ & Trực cấp cứu
+  function renderEmergencyDashboard() {
+    const todayStr = localDate();
+    
+    // Tìm bác sĩ đang trực hôm nay (quét từ Lịch làm việc)
+    let onCallDoc = 'Chưa phân công';
+    try {
+      const weekStart = typeof rsWeekStart !== 'undefined' ? rsWeekStart(new Date()) : todayStr;
+      const roster = (DB.data.roster || []).find(r => r.weekStart === weekStart && r.kind === 'doctor');
+      if(roster && roster.cells) {
+         const dayIdx = (new Date().getDay() + 6) % 7;
+         for(const key in roster.cells) {
+           const parts = key.split('|');
+           if(Number(parts[1]) === dayIdx && roster.cells[key].length > 0) {
+             // Lấy tên
+             const codes = roster.cells[key];
+             const names = codes.map(c => {
+                const s = (DB.data.staff||[]).find(x => x.empCode === c);
+                return s ? s.fullName : c;
+             });
+             onCallDoc = names.join(', ');
+             break;
+           }
+         }
+      }
+    } catch(e) { console.log(e); }
+
+    let html = `
+      <div class="page-head">
+        <div><h1>🚨 Báo Động & Cấp Cứu</h1><div class="subtitle">Hệ thống điều phối khẩn cấp (STAT / Code Red)</div></div>
+      </div>
+      
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
+        <!-- Cột Báo động -->
+        <div class="card" style="background:linear-gradient(135deg, #fee2e2, #fecaca); border:2px solid #ef4444; text-align:center; padding:40px 20px; display:flex; flex-direction:column; justify-content:center;">
+          <h2 style="color:#b91c1c; font-size:24px; margin-bottom:10px;">KÍCH HOẠT BÁO ĐỘNG ĐỎ</h2>
+          <p style="color:#7f1d1d; margin-bottom:20px; font-size:13px;">Bấm nút dưới đây để phát tín hiệu khẩn cấp đến toàn bộ Ekip và gửi thông báo lên hệ thống.</p>
+          <button class="btn" style="background:#dc2626; font-size:20px; padding:15px 40px; border-radius:50px; box-shadow:0 10px 20px rgba(220,38,38,0.4); width:100%;" onclick="triggerCodeRed()">
+            🔴 BÁO ĐỘNG ĐỎ
+          </button>
+        </div>
+
+        <!-- Cột Ekip trực -->
+        <div class="card">
+          <h3>Ekip trực hôm nay (${fmtDate(todayStr)})</h3>
+          <div style="margin-top:15px; padding:15px; background:var(--soft); border-radius:10px; border-left:4px solid var(--accent);">
+            <div style="font-size:11px; color:var(--muted); text-transform:uppercase; font-weight:bold;">Bác sĩ CĐHA trực</div>
+            <div style="font-size:20px; font-weight:bold; color:var(--accent); margin-top:4px;">${esc(onCallDoc)}</div>
+          </div>
+          <div style="margin-top:10px; padding:15px; background:var(--soft); border-radius:10px; border-left:4px solid var(--warn);">
+            <div style="font-size:11px; color:var(--muted); text-transform:uppercase; font-weight:bold;">KTV Trực</div>
+            <div style="font-size:20px; font-weight:bold; color:var(--warn); margin-top:4px;">Đang cập nhật...</div>
+          </div>
+          <div style="margin-top:10px; padding:15px; background:var(--soft); border-radius:10px; border-left:4px solid var(--good);">
+            <div style="font-size:11px; color:var(--muted); text-transform:uppercase; font-weight:bold;">Ekip Gây mê (An thần)</div>
+            <div style="font-size:20px; font-weight:bold; color:var(--good); margin-top:4px;">Đang cập nhật...</div>
+          </div>
+        </div>
+      </div>
+    `;
+    $('#view').innerHTML = html;
+  }
+
+  function triggerCodeRed() {
+    if(!confirm('XÁC NHẬN: Kích hoạt báo động đỏ toàn khoa CĐHA?')) return;
+    
+    // Tạo thông báo khẩn
+    addNotification(
+      '🚨 BÁO ĐỘNG ĐỎ', 
+      `${CURRENT.name} vừa kích hoạt báo động đỏ! Yêu cầu toàn bộ ekip trực có mặt ngay lập tức.`
+    );
+    
+    // Ghi log
+    audit('create', 'emergency_alerts', '', 'Báo động đỏ bởi ' + CURRENT.name);
+    
+    toast('🔴 Đã phát lệnh Báo Động Đỏ đến toàn hệ thống!');
+    openNotifications(); // Tự động mở bảng thông báo cho người bấm
+  }
+</script>
+<!-- ================================================== -->
+<!-- MODULE: EKIP GÂY MÊ & AN THẦN NHI (P0 - SỐ 17)     -->
+<!-- ================================================== -->
+<script>
+  function renderSedationTeam() {
+    if(!DB.data.sedation_cases) DB.data.sedation_cases = [];
+    
+    const today = localDate();
+    // Lấy danh sách ca an thần hôm nay
+    const cases = DB.data.sedation_cases.filter(x => !x._deleted && x.date === today);
+    
+    const waiting = cases.filter(c => c.status === 'Chờ an thần').length;
+    const done = cases.filter(c => c.status === 'Đã hoàn thành').length;
+
+    let rows = cases.map(c => {
+      const statusColor = c.status === 'Đã hoàn thành' ? 'good' : c.status === 'Đang thực hiện' ? 'warn' : 'bad';
+      // Cảnh báo nếu nhịn ăn < 4 tiếng (nguy cơ sặc)
+      const npoWarn = c.npo < 4 ? ' <span class="badge bad" title="Nguy cơ sặc!">⚠ NPO ngắn</span>' : '';
+      
+      return `
+        <tr>
+          <td><b>${esc(c.patient)}</b><br><small>${c.weight} kg</small></td>
+          <td>${esc(c.procedure)}</td>
+          <td>${c.npo} giờ ${npoWarn}</td>
+          <td><span class="badge info">ASA ${esc(c.asa)}</span></td>
+          <td>${esc(c.doctor)} / ${esc(c.nurse)}</td>
+          <td><span class="badge ${statusColor}">${esc(c.status)}</span></td>
+          <td>
+            <button class="btn-soft btn-sm" onclick="updateSedationStatus('${c.id}')">Cập nhật</button>
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    let html = `
+      <div class="page-head">
+        <div><h1>💤 Ekip Gây Mê & An Thần Nhi</h1><div class="subtitle">Quản lý ca chụp cần an thần (MRI/CT) - ${fmtDate(today)}</div></div>
+        <button class="btn" onclick="openSedationForm()">+ Thêm Ca Mới</button>
+      </div>
+
+      <div class="tiles" style="grid-template-columns: repeat(3, 1fr); margin-bottom: 20px;">
+        <div class="tile"><small>Tổng ca hôm nay</small><strong>${cases.length}</strong></div>
+        <div class="tile" style="border-left:4px solid var(--bad);"><small>Đang chờ</small><strong style="color:var(--bad)">${waiting}</strong></div>
+        <div class="tile" style="border-left:4px solid var(--good);"><small>Đã hoàn thành</small><strong style="color:var(--good)">${done}</strong></div>
+      </div>
+
+      <div class="card">
+        <h3>Danh sách ca an thần</h3>
+        <div class="table-wrap" style="margin-top: 10px;">
+          <table>
+            <thead>
+              <tr><th>Bệnh nhi (Cân nặng)</th><th>Thủ thuật</th><th>Nhịn ăn (NPO)</th><th>Phân loại</th><th>Ekip (BS/ĐD)</th><th>Trạng thái</th><th></th></tr>
+            </thead>
+            <tbody>
+              ${cases.length > 0 ? rows : '<tr><td colspan="7" class="empty">Hôm nay chưa có ca an thần nào.</td></tr>'}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+    $('#view').innerHTML = html;
+  }
+
+  function openSedationForm() {
+    const staffOptions = (DB.data.staff || []).map(s => `<option value="${esc(s.fullName)}">${esc(s.fullName)}</option>`).join('');
+    
+    $('#dlg-title').textContent = '💤 Thêm Ca An Thần Mới';
+    $('#dlg-body').innerHTML = `
+      <div class="form-group full">
+        <label>Tên bệnh nhi *</label>
+        <input type="text" id="sed-patient" placeholder="VD: Bé Nguyễn Văn B">
+      </div>
+      <div class="form-group">
+        <label>Cân nặng (kg) *</label>
+        <input type="number" id="sed-weight" value="15">
+      </div>
+      <div class="form-group">
+        <label>Thời gian nhịn ăn (giờ) *</label>
+        <input type="number" id="sed-npo" value="6" title="Trẻ nhỏ thường cần nhịn ăn 4-6 tiếng">
+      </div>
+      <div class="form-group">
+        <label>Phân loại sức khỏe (ASA)</label>
+        <select id="sed-asa">
+          <option value="I">ASA I (Khỏe mạnh)</option>
+          <option value="II">ASA II (Bệnh nhẹ)</option>
+          <option value="III">ASA III (Bệnh nặng)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Thủ thuật</label>
+        <select id="sed-procedure">
+          <option>Chụp MRI</option>
+          <option>Chụp CT</option>
+          <option>Khác</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Bác sĩ Gây mê *</label>
+        <select id="sed-doctor">${staffOptions}</select>
+      </div>
+      <div class="form-group">
+        <label>Điều dưỡng phụ *</label>
+        <select id="sed-nurse">${staffOptions}</select>
+      </div>
+    `;
+    $('#dlg-foot').innerHTML = `
+      <button type="button" class="btn-soft" onclick="closeDlg()">Hủy</button>
+      <button type="button" class="btn" onclick="saveSedationCase()">💾 Lưu Ca</button>
+    `;
+    $('#dlg').showModal();
+  }
+
+  function saveSedationCase() {
+    const patient = $('#sed-patient').value.trim();
+    if(!patient) { toast('Vui lòng nhập tên bệnh nhi'); return; }
+
+    const npo = Number($('#sed-npo').value);
+    if(npo < 4) {
+      if(!confirm('CẢNH BÁO: Thời gian nhịn ăn dưới 4 giờ có nguy cơ sặc cao. Bạn vẫn muốn lưu?')) return;
+    }
+
+    DB.data.sedation_cases.push({
+      id: uid(),
+      date: localDate(),
+      patient: patient,
+      weight: $('#sed-weight').value,
+      npo: npo,
+      asa: $('#sed-asa').value,
+      procedure: $('#sed-procedure').value,
+      doctor: $('#sed-doctor').value,
+      nurse: $('#sed-nurse').value,
+      status: 'Chờ an thần',
+      createdAt: Date.now()
+    });
+    
+    saveDB(); closeDlg(); renderSedationTeam(); 
+    toast('Đã thêm ca an thần');
+  }
+
+  function updateSedationStatus(id) {
+    const c = DB.data.sedation_cases.find(x => x.id === id);
+    if(!c) return;
+    
+    if(c.status === 'Chờ an thần') c.status = 'Đang thực hiện';
+    else if(c.status === 'Đang thực hiện') c.status = 'Đã hoàn thành';
+    else c.status = 'Chờ an thần';
+    
+    saveDB(); renderSedationTeam();
+  }
+</script>
+<!-- ================================================== -->
+<!-- MODULE: QUẢN LÝ THỦ THUẬT (PROCEDURE MANAGEMENT)   -->
+<!-- ================================================== -->
+<script>
+  function renderProcedureMgmt() {
+    if(!DB.data.procedures) DB.data.procedures = [];
+    
+    const procedures = DB.data.procedures.filter(x => !x._deleted).reverse();
+    
+    let rows = procedures.map(p => {
+      const statusColor = p.status === 'Hoàn thành' ? 'good' : p.status === 'Đang thực hiện' ? 'warn' : 'info';
+      const checklistPassed = p.checklistConsent && p.checklistBlood ? '<span class="badge good">Đã đủ</span>' : '<span class="badge bad">Chưa đủ</span>';
+
+      return `
+        <tr>
+          <td>${fmtDate(p.date)}</td>
+          <td><b>${esc(p.patient)}</b></td>
+          <td><span class="badge info">${esc(p.type)}</span></td>
+          <td>${esc(p.doctor)}</td>
+          <td>${checklistPassed}</td>
+          <td><span class="badge ${statusColor}">${esc(p.status)}</span></td>
+          <td><button class="btn-soft btn-sm" onclick="updateProcedureStatus('${p.id}')">Cập nhật</button></td>
+        </tr>
+      `;
+    }).join('');
+
+    let html = `
+      <div class="page-head">
+        <div><h1>🔪 Quản Lý Thủ Thuật (Can thiệp)</h1><div class="subtitle">Sinh thiết, dẫn lưu, chọc dò...</div></div>
+        <button class="btn" onclick="openProcedureForm()">+ Thêm Thủ Thuật</button>
+      </div>
+
+      <div class="card">
+        <h3>Danh sách thủ thuật</h3>
+        <div class="table-wrap" style="margin-top: 10px;">
+          <table>
+            <thead>
+              <tr><th>Ngày</th><th>Bệnh nhân</th><th>Loại thủ thuật</th><th>Bác sĩ chính</th><th>Checklist an toàn</th><th>Trạng thái</th><th>Thao tác</th></tr>
+            </thead>
+            <tbody>
+              ${procedures.length > 0 ? rows : '<tr><td colspan="7" class="empty">Chưa có thủ thuật nào.</td></tr>'}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+    $('#view').innerHTML = html;
+  }
+
+  function openProcedureForm() {
+    const staffOptions = (DB.data.staff || []).map(s => `<option value="${esc(s.fullName)}">${esc(s.fullName)}</option>`).join('');
+    
+    $('#dlg-title').textContent = '🔪 Tạo Ca Thủ Thuật Mới';
+    $('#dlg-body').innerHTML = `
+      <div class="form-group full">
+        <label>Tên bệnh nhân *</label>
+        <input type="text" id="proc-patient" placeholder="VD: Bé Trần Thị C">
+      </div>
+      <div class="form-group">
+        <label>Ngày thực hiện *</label>
+        <input type="date" id="proc-date" value="${localDate()}">
+      </div>
+      <div class="form-group">
+        <label>Loại thủ thuật</label>
+        <select id="proc-type">
+          <option>Sinh thiết (Biopsy)</option>
+          <option>Dẫn lưu ổ áp xe</option>
+          <option>Chọc dò dịch màng phổi/ổ bụng</option>
+          <option>Can thiệp mạch</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Bác sĩ chính *</label>
+        <select id="proc-doctor">${staffOptions}</select>
+      </div>
+      <div class="form-group">
+        <label>Ekip hỗ trợ</label>
+        <input type="text" id="proc-team" placeholder="VD: KTV Nam, ĐD Hoa...">
+      </div>
+      
+      <div class="form-group full" style="background:var(--soft); padding:15px; border-radius:8px; margin-top:10px;">
+        <label style="color:var(--bad); margin-bottom:10px;">🛑 Checklist An Toàn (JCI Time-out)</label>
+        <label style="display:flex; align-items:center; gap:10px; font-size:13px; margin-bottom:8px;">
+          <input type="checkbox" id="proc-chk1" style="width:auto;"> Đã có giấy cam kết (Consent) của phụ huynh
+        </label>
+        <label style="display:flex; align-items:center; gap:10px; font-size:13px;">
+          <input type="checkbox" id="proc-chk2" style="width:auto;"> Đã có kết quả xét nghiệm đông máu
+        </label>
+      </div>
+    `;
+    $('#dlg-foot').innerHTML = `
+      <button type="button" class="btn-soft" onclick="closeDlg()">Hủy</button>
+      <button type="button" class="btn" onclick="saveProcedure()">💾 Lưu Ca</button>
+    `;
+    $('#dlg').showModal();
+  }
+
+  function saveProcedure() {
+    const patient = $('#proc-patient').value.trim();
+    const chk1 = document.getElementById('proc-chk1').checked;
+    const chk2 = document.getElementById('proc-chk2').checked;
+
+    if(!patient) { toast('Vui lòng nhập tên bệnh nhân'); return; }
+    if(!chk1 || !chk2) {
+      if(!confirm('CẢNH BÁO: Chưa hoàn tất Checklist an toàn. Bạn vẫn muốn lưu nháp ca này?')) return;
+    }
+
+    DB.data.procedures.push({
+      id: uid(),
+      date: $('#proc-date').value,
+      patient: patient,
+      type: $('#proc-type').value,
+      doctor: $('#proc-doctor').value,
+      team: $('#proc-team').value,
+      checklistConsent: chk1,
+      checklistBlood: chk2,
+      status: 'Chờ thực hiện',
+      createdAt: Date.now()
+    });
+    
+    saveDB(); closeDlg(); renderProcedureMgmt(); 
+    toast('Đã lưu ca thủ thuật');
+  }
+
+  function updateProcedureStatus(id) {
+    const p = DB.data.procedures.find(x => x.id === id);
+    if(!p) return;
+    
+    if(p.status === 'Chờ thực hiện') {
+      if(!p.checklistConsent || !p.checklistBlood) {
+        if(!confirm('Checklist chưa đủ. Bạn có chắc chắn muốn bắt đầu thực hiện?')) return;
+      }
+      p.status = 'Đang thực hiện';
+    }
+    else if(p.status === 'Đang thực hiện') p.status = 'Hoàn thành';
+    else p.status = 'Chờ thực hiện';
+    
+    saveDB(); renderProcedureMgmt();
+  }
+</script>
+<!-- ================================================== -->
+<!-- MODULE: LỊCH HỢP NHẤT (UNIFIED CALENDAR - P0 SỐ 18)-->
+<!-- ================================================== -->
+<script>
+  let UCAL_DATE = new Date();
+
+  function renderUnifiedCalendar() {
+    const year = UCAL_DATE.getFullYear();
+    const month = UCAL_DATE.getMonth();
+    
+    // Thiết lập ngày đầu và ngày cuối tháng
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const daysInMonth = lastDay.getDate();
+    
+    // Tính thứ của ngày đầu tháng (T2 là 0, CN là 6)
+    let startDow = (firstDay.getDay() + 6) % 7; 
+
+    // Lấy dữ liệu
+    const leaves = (DB.data.leave_requests || []).filter(l => l.status === 'Đã duyệt' && !l._deleted);
+    const events = (DB.data.events || []).filter(e => !e._deleted);
+    // Tạm thời lấy lịch trực từ module Roster (nếu có)
+    const rosters = (DB.data.roster || []).filter(r => !r._deleted);
+
+    let html = `
+      <div class="page-head">
+        <div><h1>🗓️ Lịch Hợp Nhất</h1><div class="subtitle">Tổng hợp Lịch họp · Ca trực · Nghỉ phép</div></div>
+        <div class="cal-toolbar" style="margin:0;">
+          <div class="nav-btns">
+            <button class="btn-soft" onclick="ucalPrev()">◀</button>
+            <button class="btn-soft" onclick="ucalToday()">Tháng này</button>
+            <button class="btn-soft" onclick="ucalNext()">▶</button>
+          </div>
+          <div class="title" style="font-size:18px; font-weight:bold; margin-left:15px;">Tháng ${month + 1} / ${year}</div>
+        </div>
+      </div>
+
+      <!-- Chú thích màu -->
+      <div style="display:flex; gap:15px; margin-bottom:15px; font-size:12px;">
+        <div><span class="badge" style="background:#dbeafe; color:#1e40af;">🔵 Lịch họp</span></div>
+        <div><span class="badge" style="background:#fef3c7; color:#92400e;">🟡 Trực</span></div>
+        <div><span class="badge" style="background:#fee2e2; color:#b91c1c;">🔴 Nghỉ phép</span></div>
+      </div>
+
+      <div class="cal-grid" style="background:var(--line); gap:1px; border:1px solid var(--line);">
+    `;
+    
+    // Vẽ header Thứ
+    ['T2','T3','T4','T5','T6','T7','CN'].forEach(d => {
+      html += `<div style="background:var(--panel2); text-align:center; padding:10px 0; font-size:11px; font-weight:bold; color:var(--muted); text-transform:uppercase;">${d}</div>`;
+    });
+
+    // Vẽ các ô trống đầu tháng
+    for(let i=0; i<startDow; i++) {
+      html += `<div style="background:var(--panel); min-height:100px;"></div>`;
+    }
+
+    // Vẽ các ngày trong tháng
+    const todayStr = localDate();
+    for(let d=1; d<=daysInMonth; d++) {
+      const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      const isToday = dateStr === todayStr;
+      
+      // 1. Tìm lịch họp
+      const dayEvents = events.filter(e => e.date === dateStr);
+      const eventHtml = dayEvents.map(e => `<div style="font-size:10px; background:#dbeafe; color:#1e40af; padding:2px 4px; border-radius:4px; margin-bottom:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">🔵 ${esc(e.title)}</div>`).join('');
+
+      // 2. Tìm người nghỉ phép
+      const dayLeaves = leaves.filter(l => dateStr >= l.startDate && dateStr <= l.endDate);
+      const leaveHtml = dayLeaves.map(l => `<div style="font-size:10px; background:#fee2e2; color:#b91c1c; padding:2px 4px; border-radius:4px; margin-bottom:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">🔴 Nghỉ: ${esc(l.empName || l.empCode)}</div>`).join('');
+
+      // (Sẽ bổ sung logic quét lịch trực vào đây ở bước sau)
+      
+      html += `
+        <div style="background:var(--panel); min-height:110px; padding:6px; ${isToday ? 'border:2px solid var(--accent);' : ''}">
+          <div style="font-weight:bold; font-size:13px; color:${isToday ? 'var(--accent)' : 'var(--ink)'}; margin-bottom:4px;">${d}</div>
+          ${eventHtml}
+          ${leaveHtml}
+        </div>
+      `;
+    }
+    
+    html += `</div>`;
+    $('#view').innerHTML = html;
+  }
+
+  function ucalPrev() { UCAL_DATE.setMonth(UCAL_DATE.getMonth() - 1); renderUnifiedCalendar(); }
+  function ucalNext() { UCAL_DATE.setMonth(UCAL_DATE.getMonth() + 1); renderUnifiedCalendar(); }
+  function ucalToday() { UCAL_DATE = new Date(); renderUnifiedCalendar(); }
+</script>
+<script>
+  // Đăng ký Service Worker cho PWA
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js').then(registration => {
+        console.log('PWA ServiceWorker registered!');
+      }).catch(err => {
+        console.log('ServiceWorker registration failed: ', err);
+      });
+    });
+  }
+</script>
+</body>
 </html>
