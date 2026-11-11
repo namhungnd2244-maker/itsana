@@ -222,16 +222,14 @@ const SCHEMA={
   dash_training:{g:'A',n:'Dashboard Đào tạo',icon:'🎓',view:'dashboard'},
   
   // ---- B. NHÂN SỰ (16) ----
-    leave: {g:'B', n:'Đơn Nghỉ Phép', icon:'🌴', view:'leave'},
-  staff:{g:'B',n:'Nhân sự',icon:'👤',f:[
-    {k:'empCode',l:'Mã NV',t:'text',r:1},{k:'fullName',l:'Họ tên',t:'text',r:1},
-    {k:'title',l:'Chức danh',t:'select',o:['BS','BSPK','KTV','ĐD','NV']},
-    {k:'role',l:'Vai trò',t:'select',o:['Bác sĩ CĐHA','KTV CĐHA','Điều dưỡng','Hành chính']},
-    {k:'group',l:'Nhóm CM',t:'select',o:['XQ','CT','MRI','SA','Can thiệp','Đa PT']},
-    {k:'contract',l:'Hợp đồng',t:'select',o:['Biên chế','HĐ dài hạn','HĐ ngắn hạn','Thỉnh giảng']},
-    {k:'fte',l:'FTE',t:'num'},{k:'joinDate',l:'Ngày vào',t:'date'},
-    {k:'status',l:'Trạng thái',t:'select',o:['Đang làm','Nghỉ phép','Thai sản','Đã nghỉ'],r:1}
-  ]},
+    leave_requests:{g:'B',n:'Đơn nghỉ phép',icon:'🌴',f:[
+      {k:'empCode',l:'Mã NV',t:'text',r:1},
+      {k:'type',l:'Loại nghỉ',t:'select',o:['Phép năm','Nghỉ bù','Ốm','Thai sản','Không lương']},
+      {k:'startDate',l:'Từ ngày',t:'date',r:1},{k:'endDate',l:'Đến ngày',t:'date',r:1},
+      {k:'reason',l:'Lý do',t:'textarea',full:1},
+      {k:'approvedBy',l:'Người duyệt',t:'text'},
+      {k:'status',l:'Trạng thái',t:'select',o:['Chờ duyệt','Đã duyệt','Từ chối']}
+    ]},
   staff_360:{g:'B',n:'Hồ sơ 360°',icon:'🔄',f:[
     {k:'empCode',l:'Mã NV',t:'text',r:1},
     {k:'summary',l:'Tổng hợp (đào tạo, khen thưởng, sự cố...)',t:'textarea',full:1}
