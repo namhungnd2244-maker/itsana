@@ -211,6 +211,7 @@ function can(mod,action){
 }
 
 const SCHEMA={
+    approval_hub: {g:'K', n:'Trung Tâm Phê Duyệt', icon:'✅', view:'approval_hub'},
     ops_center: {g:'K', n:'Trung Tâm Vận Hành', icon:'🚀', view:'ops_center'},
   // ---- A. DASHBOARD (7) ----
   dash_executive:{g:'A',n:'Dashboard Lãnh đạo',icon:'📊',view:'dashboard'},
@@ -956,6 +957,7 @@ function route(k){
   else if(m.view==='settings')renderSettings();
   else if(m.view==='monthly_report')renderMonthlyReportView();
   else if(m.view==='calendar')       renderCalendar();
+      else if(m.view==='approval_hub')   renderApprovalHub();
       else if(m.view==='ops_center') renderOpsCenter();
   else if(m.view==='cases')          renderCases();
   else if(m.view==='template')       renderTemplateLibrary();
@@ -3373,6 +3375,99 @@ async function doLogin(){
   .dialog-head { background: #f8fafc; border-bottom: 1px solid var(--line); padding: 16px 24px; }
   .dialog-foot { background: #f8fafc; border-top: 1px solid var(--line); padding: 16px 24px; }
 </style>
-<!-- KẾT THÚC UI OVERRIDE -->
+<!-- ================================================== -->
+<!-- MODULE: TRUNG TÂM PHÊ DUYỆT (APPROVAL HUB)         -->
+<!-- ================================================== -->
+<script>
+  function renderApprovalHub() {
+    if(!can('dashboard', 'r')) return; // Chỉ Admin/Trưởng khoa mới được vào
+
+    // 1. Quét tất cả các module để tìm những thứ đang "Chờ duyệt"
+    const pendingLeaves = (DB.data.leave_requests || []).filter(x => !x._deleted && x.status === 'Chờ duyệt');
+    // (Sau này có thể thêm: pendingOvertime, pendingRepairs...)
+
+    const totalPending = pendingLeaves.length;
+
+    let rows = pendingLeaves.map(l => `
+      <tr>
+        <td><span class="badge info">Nghỉ phép</span></td>
+        <td><b>${esc(l.empName || l.empCode)}</b></td>
+        <td>${esc(l.type)}</td>
+        <td>${fmtDate(l.startDate)} ➔ ${fmtDate(l.endDate)}</td>
+        <td>${esc(l.reason || '')}</td>
+        <td>
+          <button class="btn btn-sm" style="background:var(--good); color:white; border:0; padding:4px 10px; border-radius:4px; cursor:pointer; margin-right:5px;" 
+                  onclick="quickApprove('leave_requests', '${l.id}')">✓ Duyệt</button>
+          <button class="btn-soft btn-sm" style="color:var(--bad); border-color:var(--bad); padding:4px 10px; border-radius:4px; cursor:pointer;" 
+                  onclick="quickReject('leave_requests', '${l.id}')">✕ Từ chối</button>
+        </td>
+      </tr>
+    `).join('');
+
+    let html = `
+      <div class="page-head">
+        <div>
+          <h1>✅ Trung Tâm Phê Duyệt</h1>
+          <div class="subtitle">Tổng hợp các yêu cầu đang chờ bạn xử lý</div>
+        </div>
+        <div class="tile" style="background:var(--soft); border-color:var(--accent); padding:10px 20px;">
+          <small>Đang chờ duyệt</small>
+          <strong style="color:var(--accent); font-size:24px;">${totalPending}</strong>
+        </div>
+      </div>
+      
+      <div class="card">
+        <h3>Danh sách yêu cầu</h3>
+        <div class="table-wrap" style="margin-top:10px;">
+          <table>
+            <thead>
+              <tr>
+                <th>Loại yêu cầu</th><th>Nhân viên</th><th>Chi tiết</th><th>Thời gian</th><th>Lý do</th><th>Thao tác</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${totalPending > 0 ? rows : '<tr><td colspan="6" class="empty">Tuyệt vời! Không có yêu cầu nào đang chờ duyệt.</td></tr>'}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+    
+    $('#view').innerHTML = html;
+  }
+
+  // Hàm xử lý Duyệt nhanh
+  function quickApprove(module, id) {
+    if(!confirm('Xác nhận DUYỆT yêu cầu này?')) return;
+    const item = DB.data[module].find(x => x.id === id);
+    if(item) {
+      item.status = 'Đã duyệt';
+      item.approvedBy = CURRENT.name; // Ghi nhận người duyệt
+      item.updatedAt = Date.now();
+      
+      audit('update', module, id, 'Duyệt nhanh từ Trung Tâm');
+      saveDB();
+      renderApprovalHub(); // Load lại giao diện
+      toast('Đã duyệt thành công!');
+    }
+  }
+
+  // Hàm xử lý Từ chối
+  function quickReject(module, id) {
+    if(!confirm('Xác nhận TỪ CHỐI yêu cầu này?')) return;
+    const item = DB.data[module].find(x => x.id === id);
+    if(item) {
+      item.status = 'Từ chối';
+      item.approvedBy = CURRENT.name;
+      item.updatedAt = Date.now();
+      
+      audit('update', module, id, 'Từ chối từ Trung Tâm');
+      saveDB();
+      renderApprovalHub();
+      toast('Đã từ chối yêu cầu.');
+    }
+  }
+</script>
+<!-- KẾT THÚC TRUNG TÂM PHÊ DUYỆT -->
 </body>
 </html>
