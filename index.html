@@ -246,14 +246,6 @@ const SCHEMA={
     {k:'startDate',l:'Từ ngày',t:'date'},{k:'endDate',l:'Đến ngày',t:'date'},
     {k:'status',l:'Trạng thái',t:'select',o:['Chưa','Đang làm','Hoàn thành']}
   ]},
-  leave_requests:{g:'B',n:'Đơn nghỉ phép',icon:'🌴',f:[
-    {k:'empCode',l:'Mã NV',t:'text',r:1},
-    {k:'type',l:'Loại nghỉ',t:'select',o:['Phép năm','Nghỉ bù','Ốm','Thai sản','Không lương']},
-    {k:'startDate',l:'Từ ngày',t:'date',r:1},{k:'endDate',l:'Đến ngày',t:'date',r:1},
-    {k:'reason',l:'Lý do',t:'textarea',full:1},
-    {k:'approvedBy',l:'Người duyệt',t:'text'},
-    {k:'status',l:'Trạng thái',t:'select',o:['Chờ duyệt','Đã duyệt','Từ chối']}
-  ]},
   overtime:{g:'B',n:'Làm thêm ngoài giờ',icon:'⏰',f:[
     {k:'empCode',l:'Mã NV',t:'text',r:1},{k:'date',l:'Ngày',t:'date',r:1},
     {k:'slot',l:'Ca',t:'select',o:['Ca 0 (05:30-07:00)','Ca 1 (07:00-11:00)','Ca 2 (11:00-13:00)','Ca 3 (13:00-16:00)','Ca 4 (16:00-19:30)','Ca 5 (19:30-21:00)']},
