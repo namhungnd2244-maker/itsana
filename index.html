@@ -309,6 +309,7 @@ const SCHEMA={
   ]},
 
   // ---- C. CHUYÊN MÔN (12) ----
+    sedation_team: {g:'C', n:'Ekip Gây Mê (An Thần)', icon:'💤', view:'sedation_team'},
   daily_volumes:{g:'C',n:'Sản lượng ngày',icon:'📆',f:[
     {k:'date',l:'Ngày',t:'date',r:1},
     {k:'modality',l:'Phương thức',t:'select',o:['XQ','CT','MRI','SA','Điện tim']},
@@ -960,6 +961,7 @@ function route(k){
   else if(m.view==='settings')renderSettings();
   else if(m.view==='monthly_report')renderMonthlyReportView();
   else if(m.view==='calendar')       renderCalendar();
+      else if(m.view==='sedation_team') renderSedationTeam();
       else if(m.view==='emergency_dashboard') renderEmergencyDashboard();
       else if(m.view==='payroll')   renderPayroll();
       else if(m.view==='my_workspace')   renderMyWorkspace();
@@ -3948,6 +3950,156 @@ async function doLogin(){
     openNotifications(); // Tự động mở bảng thông báo cho người bấm
   }
 </script>
-<!-- KẾT THÚC NOTIFICATION & EMERGENCY -->
+<!-- ================================================== -->
+<!-- MODULE: EKIP GÂY MÊ & AN THẦN NHI (P0 - SỐ 17)     -->
+<!-- ================================================== -->
+<script>
+  function renderSedationTeam() {
+    if(!DB.data.sedation_cases) DB.data.sedation_cases = [];
+    
+    const today = localDate();
+    // Lấy danh sách ca an thần hôm nay
+    const cases = DB.data.sedation_cases.filter(x => !x._deleted && x.date === today);
+    
+    const waiting = cases.filter(c => c.status === 'Chờ an thần').length;
+    const done = cases.filter(c => c.status === 'Đã hoàn thành').length;
+
+    let rows = cases.map(c => {
+      const statusColor = c.status === 'Đã hoàn thành' ? 'good' : c.status === 'Đang thực hiện' ? 'warn' : 'bad';
+      // Cảnh báo nếu nhịn ăn < 4 tiếng (nguy cơ sặc)
+      const npoWarn = c.npo < 4 ? ' <span class="badge bad" title="Nguy cơ sặc!">⚠ NPO ngắn</span>' : '';
+      
+      return `
+        <tr>
+          <td><b>${esc(c.patient)}</b><br><small>${c.weight} kg</small></td>
+          <td>${esc(c.procedure)}</td>
+          <td>${c.npo} giờ ${npoWarn}</td>
+          <td><span class="badge info">ASA ${esc(c.asa)}</span></td>
+          <td>${esc(c.doctor)} / ${esc(c.nurse)}</td>
+          <td><span class="badge ${statusColor}">${esc(c.status)}</span></td>
+          <td>
+            <button class="btn-soft btn-sm" onclick="updateSedationStatus('${c.id}')">Cập nhật</button>
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    let html = `
+      <div class="page-head">
+        <div><h1>💤 Ekip Gây Mê & An Thần Nhi</h1><div class="subtitle">Quản lý ca chụp cần an thần (MRI/CT) - ${fmtDate(today)}</div></div>
+        <button class="btn" onclick="openSedationForm()">+ Thêm Ca Mới</button>
+      </div>
+
+      <div class="tiles" style="grid-template-columns: repeat(3, 1fr); margin-bottom: 20px;">
+        <div class="tile"><small>Tổng ca hôm nay</small><strong>${cases.length}</strong></div>
+        <div class="tile" style="border-left:4px solid var(--bad);"><small>Đang chờ</small><strong style="color:var(--bad)">${waiting}</strong></div>
+        <div class="tile" style="border-left:4px solid var(--good);"><small>Đã hoàn thành</small><strong style="color:var(--good)">${done}</strong></div>
+      </div>
+
+      <div class="card">
+        <h3>Danh sách ca an thần</h3>
+        <div class="table-wrap" style="margin-top: 10px;">
+          <table>
+            <thead>
+              <tr><th>Bệnh nhi (Cân nặng)</th><th>Thủ thuật</th><th>Nhịn ăn (NPO)</th><th>Phân loại</th><th>Ekip (BS/ĐD)</th><th>Trạng thái</th><th></th></tr>
+            </thead>
+            <tbody>
+              ${cases.length > 0 ? rows : '<tr><td colspan="7" class="empty">Hôm nay chưa có ca an thần nào.</td></tr>'}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+    $('#view').innerHTML = html;
+  }
+
+  function openSedationForm() {
+    const staffOptions = (DB.data.staff || []).map(s => `<option value="${esc(s.fullName)}">${esc(s.fullName)}</option>`).join('');
+    
+    $('#dlg-title').textContent = '💤 Thêm Ca An Thần Mới';
+    $('#dlg-body').innerHTML = `
+      <div class="form-group full">
+        <label>Tên bệnh nhi *</label>
+        <input type="text" id="sed-patient" placeholder="VD: Bé Nguyễn Văn B">
+      </div>
+      <div class="form-group">
+        <label>Cân nặng (kg) *</label>
+        <input type="number" id="sed-weight" value="15">
+      </div>
+      <div class="form-group">
+        <label>Thời gian nhịn ăn (giờ) *</label>
+        <input type="number" id="sed-npo" value="6" title="Trẻ nhỏ thường cần nhịn ăn 4-6 tiếng">
+      </div>
+      <div class="form-group">
+        <label>Phân loại sức khỏe (ASA)</label>
+        <select id="sed-asa">
+          <option value="I">ASA I (Khỏe mạnh)</option>
+          <option value="II">ASA II (Bệnh nhẹ)</option>
+          <option value="III">ASA III (Bệnh nặng)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Thủ thuật</label>
+        <select id="sed-procedure">
+          <option>Chụp MRI</option>
+          <option>Chụp CT</option>
+          <option>Khác</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Bác sĩ Gây mê *</label>
+        <select id="sed-doctor">${staffOptions}</select>
+      </div>
+      <div class="form-group">
+        <label>Điều dưỡng phụ *</label>
+        <select id="sed-nurse">${staffOptions}</select>
+      </div>
+    `;
+    $('#dlg-foot').innerHTML = `
+      <button type="button" class="btn-soft" onclick="closeDlg()">Hủy</button>
+      <button type="button" class="btn" onclick="saveSedationCase()">💾 Lưu Ca</button>
+    `;
+    $('#dlg').showModal();
+  }
+
+  function saveSedationCase() {
+    const patient = $('#sed-patient').value.trim();
+    if(!patient) { toast('Vui lòng nhập tên bệnh nhi'); return; }
+
+    const npo = Number($('#sed-npo').value);
+    if(npo < 4) {
+      if(!confirm('CẢNH BÁO: Thời gian nhịn ăn dưới 4 giờ có nguy cơ sặc cao. Bạn vẫn muốn lưu?')) return;
+    }
+
+    DB.data.sedation_cases.push({
+      id: uid(),
+      date: localDate(),
+      patient: patient,
+      weight: $('#sed-weight').value,
+      npo: npo,
+      asa: $('#sed-asa').value,
+      procedure: $('#sed-procedure').value,
+      doctor: $('#sed-doctor').value,
+      nurse: $('#sed-nurse').value,
+      status: 'Chờ an thần',
+      createdAt: Date.now()
+    });
+    
+    saveDB(); closeDlg(); renderSedationTeam(); 
+    toast('Đã thêm ca an thần');
+  }
+
+  function updateSedationStatus(id) {
+    const c = DB.data.sedation_cases.find(x => x.id === id);
+    if(!c) return;
+    
+    if(c.status === 'Chờ an thần') c.status = 'Đang thực hiện';
+    else if(c.status === 'Đang thực hiện') c.status = 'Đã hoàn thành';
+    else c.status = 'Chờ an thần';
+    
+    saveDB(); renderSedationTeam();
+  }
+</script>
+<!-- KẾT THÚC EKIP GÂY MÊ -->
 </body>
 </html>
