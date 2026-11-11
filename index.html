@@ -3254,78 +3254,69 @@ async function doLogin(){
 
   // 2. Hàm vẽ giao diện chính
  <script>
- <!-- BẮT ĐẦU: MODULE NGHỈ PHÉP (BẢN AN TOÀN) -->
-<script>
-  function renderLeaveModule() {
-    try {
-      // Khởi tạo an toàn
-      if (!DB.data.leave_requests) DB.data.leave_requests = [];
-      if (!DB.data.leave_balances) DB.data.leave_balances = {};
-      
-      // Lấy user an toàn
-      const userCode = (typeof CURRENT !== 'undefined' && CURRENT) ? CURRENT.username : 'admin';
-      const userName = (typeof CURRENT !== 'undefined' && CURRENT) ? CURRENT.name : 'Quản trị viên';
-      
-      if (DB.data.leave_balances[userCode] === undefined) DB.data.leave_balances[userCode] = 12;
+     function renderLeaveModule() {
+    // Khởi tạo an toàn
+    if (!DB.data.leave_requests) DB.data.leave_requests = [];
+    if (!DB.data.leave_balances) DB.data.leave_balances = {};
+    
+    const userCode = (typeof CURRENT !== 'undefined' && CURRENT) ? CURRENT.username : 'admin';
+    if (DB.data.leave_balances[userCode] === undefined) DB.data.leave_balances[userCode] = 12;
 
-      const leaves = DB.data.leave_requests.filter(x => !x._deleted).reverse();
-      const myBalance = DB.data.leave_balances[userCode];
-      const isManager = true; // Tạm thời cho phép Admin duyệt
+    const leaves = DB.data.leave_requests.filter(x => !x._deleted).reverse();
+    const myBalance = DB.data.leave_balances[userCode];
+    const isManager = CURRENT && (CURRENT.role === 'admin' || CURRENT.role === 'doctor');
 
-      let html = `
-        <div class="page-head">
-          <div>
-            <h1>🌴 Quản Lý Đơn Nghỉ Phép</h1>
-            <div class="subtitle" style="color:var(--accent); font-weight:bold; font-size:14px; margin-top:5px;">
-              Số dư phép của bạn: ${myBalance} ngày
-            </div>
+    let html = `
+      <div class="page-head">
+        <div>
+          <h1>🌴 Quản Lý Đơn Nghỉ Phép</h1>
+          <div class="subtitle" style="color:var(--accent); font-weight:bold; font-size:14px; margin-top:5px;">
+            Số dư phép của bạn: ${myBalance} ngày
           </div>
-          <button class="btn" onclick="openLeaveForm()">+ Tạo Đơn Nghỉ</button>
         </div>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Nhân viên</th><th>Loại nghỉ</th><th>Từ ngày</th><th>Đến ngày</th><th>Trạng thái</th><th>Thao tác</th>
-              </tr>
-            </thead>
-            <tbody>`;
-
-      if (leaves.length === 0) {
-        html += `<tr><td colspan="6" class="empty">Chưa có đơn nghỉ phép nào. Bấm "+ Tạo Đơn Nghỉ" để thử.</td></tr>`;
-      } else {
-        leaves.forEach(l => {
-          const statusColor = l.status === 'Đã duyệt' ? 'good' : l.status === 'Từ chối' ? 'bad' : 'warn';
-          let actionBtns = '';
-          
-          if (l.status === 'Chờ duyệt' && isManager) {
-            actionBtns = `
-              <button class="btn-soft btn-sm" style="color:var(--good); border-color:var(--good)" onclick="updateLeaveStatus('${l.id}', 'Đã duyệt')">✓ Duyệt</button>
-              <button class="btn-soft btn-sm" style="color:var(--bad); border-color:var(--bad)" onclick="updateLeaveStatus('${l.id}', 'Từ chối')">✕ Từ chối</button>
-            `;
-          } else {
-            actionBtns = `<span style="font-size:11px; color:var(--muted)">${l.approvedBy ? 'Duyệt: ' + l.approvedBy : ''}</span>`;
-          }
-
-          html += `
+        <button class="btn" onclick="openLeaveForm()">+ Tạo Đơn Nghỉ</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
             <tr>
-              <td><b>${esc(l.empName || l.empCode)}</b></td>
-              <td><span class="badge info">${esc(l.type)}</span></td>
-              <td>${esc(l.startDate)}</td>
-              <td>${esc(l.endDate)}</td>
-              <td><span class="badge ${statusColor}">${esc(l.status)}</span></td>
-              <td>${actionBtns}</td>
+              <th>#</th><th>Nhân viên</th><th>Loại nghỉ</th><th>Từ ngày</th><th>Đến ngày</th><th>Lý do</th><th>Trạng thái</th><th>Thao tác</th>
             </tr>
+          </thead>
+          <tbody>`;
+
+    if (leaves.length === 0) {
+      html += `<tr><td colspan="8" class="empty">Chưa có đơn nghỉ phép nào. Bấm "+ Tạo Đơn Nghỉ" để thử.</td></tr>`;
+    } else {
+      leaves.forEach((l, i) => {
+        const statusColor = l.status === 'Đã duyệt' ? 'good' : l.status === 'Từ chối' ? 'bad' : 'warn';
+        let actionBtns = '';
+        
+        if (l.status === 'Chờ duyệt' && isManager) {
+          actionBtns = `
+            <button class="btn-soft btn-sm" style="color:var(--good); border-color:var(--good); margin-right:4px;" onclick="updateLeaveStatus('${l.id}', 'Đã duyệt')">✓ Duyệt</button>
+            <button class="btn-soft btn-sm" style="color:var(--bad); border-color:var(--bad);" onclick="updateLeaveStatus('${l.id}', 'Từ chối')">✕ Từ chối</button>
           `;
-        });
-      }
-      html += `</tbody></table></div>`;
-      $('#view').innerHTML = html;
-      
-    } catch (e) {
-      // Nếu có lỗi, hiện lên màn hình thay vì trắng trang
-      $('#view').innerHTML = `<div class="card" style="color:var(--bad)"><h3>Có lỗi xảy ra!</h3><p>${e.message}</p><p>Vui lòng chụp màn hình này gửi cho kỹ thuật.</p></div>`;
+        } else {
+          actionBtns = `<span style="font-size:11px; color:var(--muted)">${l.approvedBy ? 'Duyệt: ' + l.approvedBy : '—'}</span>`;
+        }
+
+        html += `
+          <tr>
+            <td>${i + 1}</td>
+            <td><b>${esc(l.empName || l.empCode || '')}</b></td>
+            <td><span class="badge info">${esc(l.type || '')}</span></td>
+            <td>${esc(l.startDate || '')}</td>
+            <td>${esc(l.endDate || '')}</td>
+            <td>${esc(l.reason || '')}</td>
+            <td><span class="badge ${statusColor}">${esc(l.status || '')}</span></td>
+            <td>${actionBtns}</td>
+          </tr>
+        `;
+      });
     }
+    html += `</tbody></table></div>`;
+    $('#view').innerHTML = html;
   }
 
   function openLeaveForm() {
@@ -3383,12 +3374,22 @@ async function doLogin(){
     }
 
     DB.data.leave_requests.push({
-      id: uid(), empName: CURRENT ? CURRENT.name : 'Admin', empCode: userCode,
-      type: type, startDate: start, endDate: end, days: days, reason: reason,
-      status: 'Chờ duyệt', createdAt: Date.now()
+      id: uid(), 
+      empName: CURRENT ? CURRENT.name : 'Admin', 
+      empCode: userCode,
+      type: type, 
+      startDate: start, 
+      endDate: end, 
+      days: days, 
+      reason: reason,
+      status: 'Chờ duyệt', 
+      createdAt: Date.now()
     });
     
-    saveDB(); closeDlg(); renderLeaveModule(); toast('Đã gửi đơn nghỉ phép');
+    saveDB(); 
+    closeDlg(); 
+    renderLeaveModule(); 
+    toast('Đã gửi đơn nghỉ phép');
   }
 
   function updateLeaveStatus(id, status) {
@@ -3396,16 +3397,24 @@ async function doLogin(){
     if (!l) return;
     if (!confirm(`Xác nhận chuyển sang: ${status}?`)) return;
     
-    l.status = status; l.approvedBy = CURRENT ? CURRENT.name : 'Admin';
+    // Nếu trước đó đã duyệt (đã trừ phép) mà giờ đổi trạng thái -> Hoàn lại phép
+    if (l.status === 'Đã duyệt' && l.type.includes('Phép năm')) {
+      const currentB = DB.data.leave_balances[l.empCode] || 12;
+      DB.data.leave_balances[l.empCode] = currentB + l.days;
+    }
     
+    l.status = status; 
+    l.approvedBy = CURRENT ? CURRENT.name : 'Admin';
+    
+    // Nếu duyệt mới -> Trừ phép
     if (status === 'Đã duyệt' && l.type.includes('Phép năm')) {
       const currentB = DB.data.leave_balances[l.empCode] || 12;
       DB.data.leave_balances[l.empCode] = currentB - l.days;
     }
     
-    saveDB(); renderLeaveModule(); toast('Đã cập nhật trạng thái');
+    saveDB(); 
+    renderLeaveModule(); 
+    toast('Đã cập nhật trạng thái');
   }
-</script>
-<!-- KẾT THÚC MODULE NGHỈ PHÉP -->
 </body>
 </html>
