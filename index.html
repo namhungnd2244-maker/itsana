@@ -3715,6 +3715,97 @@ async function doLogin(){
     saveDB(); renderPayroll(); toast('Đã xóa');
   }
 </script>
-<!-- KẾT THÚC BẢNG TÍNH CÔNG -->
+<!-- ================================================== -->
+<!-- MODULE: TÌM KIẾM TOÀN CẦU (GLOBAL SEARCH - P0)     -->
+<!-- ================================================== -->
+<script>
+  // Tự động chèn nút Tìm kiếm lên thanh Header khi trang tải xong
+  setTimeout(() => {
+    const headerActions = document.querySelector('header.top .actions');
+    if (headerActions && !document.getElementById('btn-global-search')) {
+      const searchBtn = document.createElement('button');
+      searchBtn.id = 'btn-global-search';
+      searchBtn.className = 'btn-soft btn-sm';
+      searchBtn.innerHTML = '🔍 Tìm kiếm';
+      searchBtn.onclick = openGlobalSearch;
+      // Chèn vào trước nút Backup
+      headerActions.insertBefore(searchBtn, headerActions.querySelector('.btn-soft'));
+    }
+  }, 1000);
+
+  function openGlobalSearch() {
+    $('#dlg-title').textContent = '🔍 Tìm kiếm Toàn cầu';
+    $('#dlg-body').innerHTML = `
+      <div class="form-group full">
+        <input type="text" id="global-search-input" placeholder="Gõ tên nhân viên, tên bệnh nhân, lý do nghỉ, công việc..." autocomplete="off">
+      </div>
+      <div class="full" id="global-search-results" style="max-height: 400px; overflow-y: auto; margin-top: 10px;">
+        <div class="empty">Nhập ít nhất 2 ký tự để bắt đầu tìm kiếm trên toàn hệ thống...</div>
+      </div>
+    `;
+    $('#dlg-foot').innerHTML = `<button class="btn-soft" onclick="closeDlg()">Đóng</button>`;
+    $('#dlg').showModal();
+    
+    // Tự động focus vào ô nhập liệu
+    setTimeout(() => { document.getElementById('global-search-input').focus(); }, 100);
+
+    // Lắng nghe sự kiện gõ phím
+    document.getElementById('global-search-input').oninput = (e) => {
+      const q = e.target.value.toLowerCase().trim();
+      if (q.length < 2) {
+        document.getElementById('global-search-results').innerHTML = '<div class="empty">Nhập ít nhất 2 ký tự...</div>';
+        return;
+      }
+      executeGlobalSearch(q);
+    };
+  }
+
+  function executeGlobalSearch(q) {
+    let results = [];
+    // Khai báo các module sẽ được quét
+    const searchModules = {
+      'staff': { name: 'Nhân sự', icon: '👤' },
+      'leave_requests': { name: 'Nghỉ phép', icon: '🌴' },
+      'appointments': { name: 'Lịch hẹn', icon: '📅' },
+      'tasks': { name: 'Công việc', icon: '📋' }
+    };
+    
+    // Quét dữ liệu
+    for (const [mod, info] of Object.entries(searchModules)) {
+      if(!DB.data[mod]) continue;
+      
+      DB.data[mod].filter(x => !x._deleted).forEach(item => {
+        const str = JSON.stringify(item).toLowerCase();
+        if(str.includes(q)) {
+          let display = '';
+          if(mod === 'staff') display = `<b>${esc(item.fullName)}</b> (Mã: ${esc(item.empCode)}) - ${esc(item.role)}`;
+          else if(mod === 'leave_requests') display = `<b>${esc(item.empName || item.empCode)}</b> xin <span class="badge info">${esc(item.type)}</span> từ ${esc(item.startDate)} đến ${esc(item.endDate)}`;
+          else if(mod === 'appointments') display = `<b>${esc(item.patient)}</b> - ${esc(item.service)} (${esc(item.date)} ${esc(item.time)})`;
+          else if(mod === 'tasks') display = `<b>${esc(item.title)}</b> - PIC: ${esc(item.owner)}`;
+          
+          results.push({ mod, name: info.name, icon: info.icon, display });
+        }
+      });
+    }
+
+    const resDiv = document.getElementById('global-search-results');
+    if(results.length === 0) {
+      resDiv.innerHTML = '<div class="empty">Không tìm thấy kết quả nào phù hợp.</div>';
+      return;
+    }
+
+    // Hiển thị kết quả
+    resDiv.innerHTML = results.map(r => `
+      <div style="padding: 12px; border-bottom: 1px solid var(--line); display: flex; gap: 15px; align-items: center; transition: background 0.2s;" onmouseover="this.style.background='var(--soft)'" onmouseout="this.style.background='transparent'">
+        <div style="font-size: 24px;">${r.icon}</div>
+        <div style="flex: 1;">
+          <div style="font-size: 11px; color: var(--muted); text-transform: uppercase; font-weight: bold; margin-bottom: 2px;">${r.name}</div>
+          <div style="font-size: 14px;">${r.display}</div>
+        </div>
+      </div>
+    `).join('');
+  }
+</script>
+<!-- KẾT THÚC TÌM KIẾM TOÀN CẦU -->
 </body>
 </html>
