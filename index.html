@@ -3144,12 +3144,87 @@ async function doLogin(){
     toast('Đã lưu lịch hẹn thành công');
   }
 
+  // --- FORM THÊM CÔNG VIỆC ---
   function addTask(status) {
-    const t = prompt("Nhập tên công việc:");
-    if(!t) return;
-    const o = prompt("Người phụ trách (PIC):", CURRENT.name);
-    DB.data.tasks.push({ id: uid(), title: t, owner: o, status: status, createdAt: Date.now() });
-    saveDB(); renderOpsCenter(); toast('Đã thêm công việc');
+    $('#dlg-title').textContent = '📋 Thêm Công Việc Mới';
+    let staffOptions = (DB.data.staff || []).map(s => `<option value="${esc(s.fullName)}">${esc(s.fullName)}</option>`).join('');
+    
+    $('#dlg-body').innerHTML = `
+      <div class="form-group full">
+        <label>Tên công việc *</label>
+        <input type="text" id="task-title" placeholder="VD: Kiểm tra máy MRI, Họp giao ban...">
+      </div>
+      <div class="form-group">
+        <label>Người phụ trách (PIC)</label>
+        <select id="task-owner">
+          <option value="${esc(CURRENT.name)}">${esc(CURRENT.name)} (Tôi)</option>
+          ${staffOptions}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Trạng thái</label>
+        <input type="text" id="task-status" value="${esc(status)}" readonly style="background:#e2e8f0">
+      </div>
+      <div class="form-group full">
+        <label>Mô tả chi tiết</label>
+        <textarea id="task-desc" rows="3" placeholder="Mô tả các bước cần làm..."></textarea>
+      </div>
+    `;
+    $('#dlg-foot').innerHTML = `
+      <button type="button" class="btn-soft" onclick="closeDlg()">Hủy</button>
+      <button type="button" class="btn" onclick="saveTask()">💾 Lưu Công Việc</button>
+    `;
+    $('#dlg').showModal();
+  }
+
+  function saveTask() {
+    const title = $('#task-title').value.trim();
+    if (!title) { toast('Vui lòng nhập tên công việc'); return; }
+    
+    DB.data.tasks.push({
+      id: uid(),
+      title: title,
+      owner: $('#task-owner').value,
+      status: $('#task-status').value,
+      desc: $('#task-desc').value.trim(),
+      createdAt: Date.now()
+    });
+    saveDB(); closeDlg(); renderOpsCenter(); switchOpsTab('tasks'); 
+    toast('Đã thêm công việc');
+  }
+
+  // --- FORM THÊM TIN NHẮN CSKH ---
+  function addInboxMessage() {
+    $('#dlg-title').textContent = '💬 Thêm Tin Nhắn (Giả lập)';
+    $('#dlg-body').innerHTML = `
+      <div class="form-group full">
+        <label>Người gửi</label>
+        <input type="text" id="inbox-sender" value="Phụ huynh bệnh nhi">
+      </div>
+      <div class="form-group full">
+        <label>Nội dung tin nhắn *</label>
+        <textarea id="inbox-text" rows="4" placeholder="VD: Bé nhà tôi chụp XQ lúc 9h có cần nhịn ăn không?"></textarea>
+      </div>
+    `;
+    $('#dlg-foot').innerHTML = `
+      <button type="button" class="btn-soft" onclick="closeDlg()">Hủy</button>
+      <button type="button" class="btn" onclick="saveInboxMessage()">💾 Lưu Tin Nhắn</button>
+    `;
+    $('#dlg').showModal();
+  }
+
+  function saveInboxMessage() {
+    const text = $('#inbox-text').value.trim();
+    if (!text) { toast('Vui lòng nhập nội dung tin nhắn'); return; }
+    
+    DB.data.inbox.push({
+      id: uid(),
+      sender: $('#inbox-sender').value.trim(),
+      text: text,
+      ts: Date.now()
+    });
+    saveDB(); closeDlg(); renderOpsCenter(); switchOpsTab('inbox');
+    toast('Đã thêm tin nhắn');
   }
 
   function moveTask(id, dir) {
