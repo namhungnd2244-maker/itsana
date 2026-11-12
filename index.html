@@ -1,17 +1,176 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ND2 Radiology OS V5.5</title>
-@media (max-width: 900px) {
-  .layout { grid-template-columns: 1fr !important; }
-  nav { 
-    position: fixed; inset: 0 20% 0 0; z-index: 999; 
-    transform: translateX(-102%); transition: transform 0.2s; 
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>ND2 Radiology OS V5.5</title>
+
+  <!-- Đặt thẻ <style> MỞ ở đây -->
+  <style>
+   :root, body:not(.dark-mode) {
+    --bg: #f8fafc; --pnl: #ffffff; --pnl2: #f1f5f9; --ink: #0f172a; --mut: #64748b; 
+    --ln: #e2e8f0; --acc: #0f766e; --acc-hover: #115e59; --ring: rgba(15, 118, 110, 0.4);
+    --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -2px rgba(0,0,0,0.05);
+    --shadow-glass: 0 8px 32px rgba(0,0,0,0.08);
   }
-  body.nav nav { transform: none; }
-}
+  
+  body.dark-mode {
+    --bg: #0b1120; --pnl: #1e293b; --pnl2: #0f172a; --ink: #f8fafc; --mut: #94a3b8; 
+    --ln: #334155; --acc: #14b8a6; --acc-hover: #0d9488; --ring: rgba(20, 184, 166, 0.4);
+    --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.3);
+    --shadow-glass: 0 8px 32px rgba(0,0,0,0.4);
+  }
+
+  /* Chuyển động vật lý mượt mà cấp độ Apple/Vercel */
+  body, header, main, .pnl, .card {
+    transition: background-color 0.4s cubic-bezier(0.4, 0, 0.2, 1), 
+                color 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Khóa cuộn trang khi mở menu */
+  body.no-scroll { overflow: hidden; }
+
+  /* =========================================
+     2. PREMIUM BUTTON COMPONENTS
+     ========================================= */
+  .btn-icon {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    background: var(--pnl2); color: var(--ink); 
+    border: 1px solid var(--ln); border-radius: 9999px; /* Pill shape */
+    padding: 8px 16px; font-weight: 600; font-size: 14px;
+    cursor: pointer; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  }
+  
+  .btn-icon svg { width: 16px; height: 16px; fill: currentColor; }
+
+  /* Micro-interactions */
+  .btn-icon:hover { background: var(--ln); transform: translateY(-1px); }
+  .btn-icon:active { transform: translateY(1px); }
+  
+  /* A11y Focus State */
+  .btn-icon:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px var(--ring);
+  }
+
+  .btn-mobile-menu {
+    display: none; background: var(--acc); color: #fff; border: none;
+  }
+  .btn-mobile-menu:hover { background: var(--acc-hover); }
+
+  /* =========================================
+     3. RESPONSIVE & GLASSMORPHISM MENU
+     ========================================= */
+  /* Lớp phủ tối (Overlay) */
+  .mobile-overlay {
+    position: fixed; inset: 0; background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+    z-index: 998; opacity: 0; pointer-events: none;
+    transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  body.mobile-menu-open .mobile-overlay {
+    opacity: 1; pointer-events: auto;
+  }
+
+  @media (max-width: 900px) {
+    .btn-mobile-menu { display: inline-flex; }
+
+    nav { 
+      position: fixed; top: 0; bottom: 0; left: 0; width: 280px; z-index: 999; 
+      background: var(--pnl); border-right: 1px solid var(--ln);
+      box-shadow: var(--shadow-glass);
+      transform: translateX(-100%); 
+      transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1); /* Snappy in, smooth out */
+    }
+    
+    body.mobile-menu-open nav { transform: translateX(0); }
+  }
+</style>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    // Premium SVGs thay cho Emojis
+    const ICON_SUN = `<svg viewBox="0 0 24 24"><path d="M12 4V2M12 22v-2M4 12H2m22 0h-2M6.343 6.343L4.929 4.929m14.142 14.142l-1.414-1.414M6.343 17.657l-1.414 1.414M19.071 4.929l-1.414 1.414M12 17a5 5 0 100-10 5 5 0 000 10z" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>`;
+    const ICON_MOON = `<svg viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>`;
+    const ICON_MENU = `<svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>`;
+
+    // Khôi phục trạng thái Theme
+    if (localStorage.getItem('itsana_theme') === 'dark') {
+      document.body.classList.add('dark-mode');
+    }
+
+    const header = document.querySelector('header');
+    
+    if (header) {
+      // 1. Khởi tạo Lớp phủ Mobile (Overlay) an toàn
+      const overlay = document.createElement('div');
+      overlay.className = 'mobile-overlay';
+      overlay.setAttribute('aria-hidden', 'true');
+      document.body.appendChild(overlay);
+
+      // 2. Nút Menu (Mobile) chuẩn a11y
+      const menuBtn = document.createElement('button');
+      menuBtn.className = 'btn-icon btn-mobile-menu';
+      menuBtn.innerHTML = `${ICON_MENU} <span>Menu</span>`;
+      menuBtn.setAttribute('aria-label', 'Mở menu điều hướng');
+      menuBtn.setAttribute('aria-expanded', 'false');
+      
+      const toggleMenu = (forceState) => {
+        const isOpen = typeof forceState === 'boolean' 
+          ? forceState 
+          : !document.body.classList.contains('mobile-menu-open');
+          
+        document.body.classList.toggle('mobile-menu-open', isOpen);
+        document.body.classList.toggle('no-scroll', isOpen); // Khóa cuộn background
+        menuBtn.setAttribute('aria-expanded', isOpen);
+      };
+
+      menuBtn.addEventListener('click', () => toggleMenu());
+      overlay.addEventListener('click', () => toggleMenu(false));
+
+      // 3. Nút Toggle Theme
+      const themeBtn = document.createElement('button');
+      themeBtn.className = 'btn-icon';
+      themeBtn.setAttribute('aria-label', 'Chuyển đổi giao diện Sáng/Tối');
+      
+      const updateThemeUI = (isDark) => {
+        themeBtn.innerHTML = isDark ? `${ICON_SUN} Sáng` : `${ICON_MOON} Tối`;
+      };
+      
+      updateThemeUI(document.body.classList.contains('dark-mode'));
+      
+      themeBtn.addEventListener('click', () => {
+        const isDarkNow = document.body.classList.toggle('dark-mode');
+        localStorage.setItem('itsana_theme', isDarkNow ? 'dark' : 'light');
+        updateThemeUI(isDarkNow);
+      });
+
+      // 4. Bơm vào Header (Tạo wrapper để layout không bị vỡ)
+      const actionGroup = document.createElement('div');
+      actionGroup.style.cssText = 'display: flex; gap: 12px; align-items: center; margin-right: 12px;';
+      actionGroup.appendChild(menuBtn);
+      actionGroup.appendChild(themeBtn);
+      
+      header.prepend(actionGroup);
+    }
+  });
+    @media (max-width: 900px) {
+      .layout { grid-template-columns: 1fr !important; }
+      nav { 
+        position: fixed; inset: 0 20% 0 0; z-index: 999; 
+        transform: translateX(-102%); transition: transform 0.2s; 
+      }
+      body.nav nav { transform: none; }
+    }
+    
+  </style> <!-- Bắt buộc phải có thẻ ĐÓNG ở đây -->
+
+</head>
+<body>
+  <!-- Nội dung trang web của bạn -->
 <style>
+  
 *{box-sizing:border-box;margin:0;padding:0}
 :root {
   /* Bảng màu từ HR App */
@@ -3913,159 +4072,7 @@ document.addEventListener('keydown', e=>{ if(e.key==='Escape') toggleNav(false);
   }
   const lu = $('#login-u'); if(lu) lu.focus();
 })();
-</script>
-<style>
-  /* =========================================
-     1. DESIGN TOKENS & THIẾT LẬP CƠ BẢN
-     ========================================= */
-  :root, body:not(.dark-mode) {
-    --bg: #f8fafc; --pnl: #ffffff; --pnl2: #f1f5f9; --ink: #0f172a; --mut: #64748b; 
-    --ln: #e2e8f0; --acc: #0f766e; --acc-hover: #115e59; --ring: rgba(15, 118, 110, 0.4);
-    --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -2px rgba(0,0,0,0.05);
-    --shadow-glass: 0 8px 32px rgba(0,0,0,0.08);
-  }
   
-  body.dark-mode {
-    --bg: #0b1120; --pnl: #1e293b; --pnl2: #0f172a; --ink: #f8fafc; --mut: #94a3b8; 
-    --ln: #334155; --acc: #14b8a6; --acc-hover: #0d9488; --ring: rgba(20, 184, 166, 0.4);
-    --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.3);
-    --shadow-glass: 0 8px 32px rgba(0,0,0,0.4);
-  }
-
-  /* Chuyển động vật lý mượt mà cấp độ Apple/Vercel */
-  body, header, main, .pnl, .card {
-    transition: background-color 0.4s cubic-bezier(0.4, 0, 0.2, 1), 
-                color 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-
-  /* Khóa cuộn trang khi mở menu */
-  body.no-scroll { overflow: hidden; }
-
-  /* =========================================
-     2. PREMIUM BUTTON COMPONENTS
-     ========================================= */
-  .btn-icon {
-    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-    background: var(--pnl2); color: var(--ink); 
-    border: 1px solid var(--ln); border-radius: 9999px; /* Pill shape */
-    padding: 8px 16px; font-weight: 600; font-size: 14px;
-    cursor: pointer; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-  }
-  
-  .btn-icon svg { width: 16px; height: 16px; fill: currentColor; }
-
-  /* Micro-interactions */
-  .btn-icon:hover { background: var(--ln); transform: translateY(-1px); }
-  .btn-icon:active { transform: translateY(1px); }
-  
-  /* A11y Focus State */
-  .btn-icon:focus-visible {
-    outline: none;
-    box-shadow: 0 0 0 3px var(--ring);
-  }
-
-  .btn-mobile-menu {
-    display: none; background: var(--acc); color: #fff; border: none;
-  }
-  .btn-mobile-menu:hover { background: var(--acc-hover); }
-
-  /* =========================================
-     3. RESPONSIVE & GLASSMORPHISM MENU
-     ========================================= */
-  /* Lớp phủ tối (Overlay) */
-  .mobile-overlay {
-    position: fixed; inset: 0; background: rgba(0, 0, 0, 0.4);
-    backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
-    z-index: 998; opacity: 0; pointer-events: none;
-    transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-  body.mobile-menu-open .mobile-overlay {
-    opacity: 1; pointer-events: auto;
-  }
-
-  @media (max-width: 900px) {
-    .btn-mobile-menu { display: inline-flex; }
-
-    nav { 
-      position: fixed; top: 0; bottom: 0; left: 0; width: 280px; z-index: 999; 
-      background: var(--pnl); border-right: 1px solid var(--ln);
-      box-shadow: var(--shadow-glass);
-      transform: translateX(-100%); 
-      transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1); /* Snappy in, smooth out */
-    }
-    
-    body.mobile-menu-open nav { transform: translateX(0); }
-  }
-</style>
-
-<script>
-  document.addEventListener('DOMContentLoaded', () => {
-    // Premium SVGs thay cho Emojis
-    const ICON_SUN = `<svg viewBox="0 0 24 24"><path d="M12 4V2M12 22v-2M4 12H2m22 0h-2M6.343 6.343L4.929 4.929m14.142 14.142l-1.414-1.414M6.343 17.657l-1.414 1.414M19.071 4.929l-1.414 1.414M12 17a5 5 0 100-10 5 5 0 000 10z" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>`;
-    const ICON_MOON = `<svg viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>`;
-    const ICON_MENU = `<svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>`;
-
-    // Khôi phục trạng thái Theme
-    if (localStorage.getItem('itsana_theme') === 'dark') {
-      document.body.classList.add('dark-mode');
-    }
-
-    const header = document.querySelector('header');
-    
-    if (header) {
-      // 1. Khởi tạo Lớp phủ Mobile (Overlay) an toàn
-      const overlay = document.createElement('div');
-      overlay.className = 'mobile-overlay';
-      overlay.setAttribute('aria-hidden', 'true');
-      document.body.appendChild(overlay);
-
-      // 2. Nút Menu (Mobile) chuẩn a11y
-      const menuBtn = document.createElement('button');
-      menuBtn.className = 'btn-icon btn-mobile-menu';
-      menuBtn.innerHTML = `${ICON_MENU} <span>Menu</span>`;
-      menuBtn.setAttribute('aria-label', 'Mở menu điều hướng');
-      menuBtn.setAttribute('aria-expanded', 'false');
-      
-      const toggleMenu = (forceState) => {
-        const isOpen = typeof forceState === 'boolean' 
-          ? forceState 
-          : !document.body.classList.contains('mobile-menu-open');
-          
-        document.body.classList.toggle('mobile-menu-open', isOpen);
-        document.body.classList.toggle('no-scroll', isOpen); // Khóa cuộn background
-        menuBtn.setAttribute('aria-expanded', isOpen);
-      };
-
-      menuBtn.addEventListener('click', () => toggleMenu());
-      overlay.addEventListener('click', () => toggleMenu(false));
-
-      // 3. Nút Toggle Theme
-      const themeBtn = document.createElement('button');
-      themeBtn.className = 'btn-icon';
-      themeBtn.setAttribute('aria-label', 'Chuyển đổi giao diện Sáng/Tối');
-      
-      const updateThemeUI = (isDark) => {
-        themeBtn.innerHTML = isDark ? `${ICON_SUN} Sáng` : `${ICON_MOON} Tối`;
-      };
-      
-      updateThemeUI(document.body.classList.contains('dark-mode'));
-      
-      themeBtn.addEventListener('click', () => {
-        const isDarkNow = document.body.classList.toggle('dark-mode');
-        localStorage.setItem('itsana_theme', isDarkNow ? 'dark' : 'light');
-        updateThemeUI(isDarkNow);
-      });
-
-      // 4. Bơm vào Header (Tạo wrapper để layout không bị vỡ)
-      const actionGroup = document.createElement('div');
-      actionGroup.style.cssText = 'display: flex; gap: 12px; align-items: center; margin-right: 12px;';
-      actionGroup.appendChild(menuBtn);
-      actionGroup.appendChild(themeBtn);
-      
-      header.prepend(actionGroup);
-    }
-  });
 </script>
   
   </body>
