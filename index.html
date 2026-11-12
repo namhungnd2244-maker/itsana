@@ -5,8 +5,60 @@
 <title>ND2 Radiology OS V5.5</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-:root{--bg:#f1f5f9;--pnl:#fff;--pnl2:#f8fafc;--ink:#0f172a;--mut:#64748b;--ln:#e2e8f0;--acc:#2563eb;--acc2:#1e40af;--soft:#f1f5f9;--good:#16a34a;--goodbg:#dcfce7;--warn:#d97706;--warnbg:#fef3c7;--bad:#dc2626;--badbg:#fee2e2;--sh:0 1px 3px rgba(15,23,42,.06);--shlg:0 20px 40px rgba(15,23,42,.15)}
-html,body{background:var(--bg);color:var(--ink);font:14px/1.5 system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased}
+:root {
+  /* Màu nền & Bề mặt (Surface) - Tông xám xanh dịu mắt */
+  --bg: #f4f7f9;
+  --pnl: #ffffff;
+  --pnl2: #f8fafc;
+  
+  /* Màu chữ (Ink) - Đen xanh đậm, dễ đọc */
+  --ink: #0f172a;
+  --mut: #64748b;
+  
+  /* Viền & Đường kẻ */
+  --ln: #e2e8f0;
+  
+  /* Màu chủ đạo (Primary) - Teal Y khoa */
+  --acc: #0d9488;
+  --acc2: #0f766e;
+  --soft: #f1f5f9;
+  
+  /* Trạng thái */
+  --good: #10b981;
+  --goodbg: #d1fae5;
+  --warn: #f59e0b;
+  --warnbg: #fef3c7;
+  --bad: #ef4444;
+  --badbg: #fee2e2;
+  
+  /* Đổ bóng (Shadows) mềm mại */
+  --sh: 0 1px 2px rgba(15, 23, 42, 0.04), 0 1px 3px rgba(15, 23, 42, 0.02);
+  --shlg: 0 10px 25px -3px rgba(15, 23, 42, 0.1), 0 4px 6px -2px rgba(15, 23, 42, 0.05);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0b1120;
+    --pnl: #1e293b;
+    --pnl2: #0f172a;
+    --ink: #f8fafc;
+    --mut: #94a3b8;
+    --ln: #334155;
+    --acc: #14b8a6;
+    --acc2: #0d9488;
+    --soft: #1e293b;
+    --sh: 0 1px 3px rgba(0,0,0,0.3);
+    --shlg: 0 10px 25px -3px rgba(0,0,0,0.5);
+  }
+}
+
+html,body {
+  background: var(--bg);
+  color: var(--ink);
+  font: 14px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
 button{font:inherit;cursor:pointer}
 input,select,textarea{font:inherit;padding:7px 10px;border:1px solid var(--ln);border-radius:7px;background:var(--pnl);color:var(--ink);width:100%}
 input:focus,select:focus,textarea:focus{outline:0;border-color:var(--acc)}
