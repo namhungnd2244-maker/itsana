@@ -6,34 +6,25 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root {
-  /* Màu nền & Bề mặt (Surface) - Tông xám xanh dịu mắt */
-  --bg: #f4f7f9;
-  --pnl: #ffffff;
-  --pnl2: #f8fafc;
-  
-  /* Màu chữ (Ink) - Đen xanh đậm, dễ đọc */
-  --ink: #0f172a;
-  --mut: #64748b;
-  
-  /* Viền & Đường kẻ */
-  --ln: #e2e8f0;
-  
-  /* Màu chủ đạo (Primary) - Teal Y khoa */
-  --acc: #0d9488;
-  --acc2: #0f766e;
-  --soft: #f1f5f9;
-  
-  /* Trạng thái */
-  --good: #10b981;
-  --goodbg: #d1fae5;
-  --warn: #f59e0b;
+  /* Bảng màu từ HR App */
+  --ink: #14211f;
+  --mut: #566864;
+  --acc: #0e5a52;      /* Teal (Màu chủ đạo) */
+  --acc2: #0a3f3a;     /* Deep Teal (Hover) */
+  --bg: #f3f7f6;       /* Nền giấy nhạt */
+  --pnl: #ffffff;      /* Nền thẻ */
+  --pnl2: #f8fbfa;     /* Nền bảng nhạt */
+  --ln: #d3dedb;       /* Viền xanh xám */
+  --soft: #e0eeea;     /* Nền mint nhạt */
+  --good: #16a34a;
+  --goodbg: #dcfce7;
+  --warn: #d97706;
   --warnbg: #fef3c7;
-  --bad: #ef4444;
+  --bad: #dc2626;
   --badbg: #fee2e2;
-  
-  /* Đổ bóng (Shadows) mềm mại */
-  --sh: 0 1px 2px rgba(15, 23, 42, 0.04), 0 1px 3px rgba(15, 23, 42, 0.02);
-  --shlg: 0 10px 25px -3px rgba(15, 23, 42, 0.1), 0 4px 6px -2px rgba(15, 23, 42, 0.05);
+  --sh: 0 1px 3px rgba(15,23,42,.06);
+  --shlg: 0 20px 40px rgba(15,23,42,.15);
+  --r: 10px;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -133,7 +124,7 @@ input:focus, select:focus, textarea:focus {
 .login-card button:hover{background:#1e40af}
 .login-err{color:#dc2626;font-size:12px;margin-top:10px;min-height:18px}
 #app{display:none;min-height:100vh}
-header.top{background:linear-gradient(135deg,#0b1220,#1e3a8a 70%,#2563eb);color:#fff;padding:12px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+header.top{background:var(--acc2);color:#fff;padding:12px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap; box-shadow: 0 2px 10px rgba(0,0,0,0.1);}
 header.top h1{font-size:16px;font-weight:800}
 header.top .actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 header.top .user-badge{font-size:12px;padding:5px 12px;background:rgba(255,255,255,.15);border-radius:20px}
@@ -146,29 +137,15 @@ nav .group-items.hidden{display:none}
 nav .group-title .toggle-icon{font-size:10px;transition:transform .2s}
 nav .group-title.closed .toggle-icon{transform:rotate(-90deg)}
 nav .nav-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  margin: 2px 8px;
-  border-radius: 6px;
-  color: var(--ink);
-  font-size: 13.5px;
-  cursor: pointer;
-  border: none;
-  background: transparent;
-  width: calc(100% - 16px);
-  text-align: left;
-  transition: all 0.15s ease;
+  display: flex; align-items: center; gap: 10px; padding: 10px 12px; margin: 2px 8px;
+  border-radius: 6px; color: var(--ink); font-size: 13.5px; cursor: pointer;
+  border: none; background: transparent; width: calc(100% - 16px);
+  text-align: left; transition: all 0.15s ease;
 }
-nav .nav-item:hover {
-  background: var(--soft);
-}
+nav .nav-item:hover { background: var(--soft); }
 nav .nav-item.on {
-  background: var(--acc);
-  color: #fff;
-  font-weight: 600;
-  box-shadow: 0 2px 4px rgba(13, 148, 136, 0.2);
+  background: var(--soft); color: var(--acc2); font-weight: 700;
+  border-right: 3px solid var(--acc);
 }
 nav .nav-item.on .nav-icon {
   color: #fff;
@@ -183,40 +160,14 @@ main{padding:20px;min-width:0;overflow-x:hidden}
 .filter-bar{background:#fff;padding:10px;border-radius:10px;border:1px solid var(--ln);display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center}
 .filter-bar select,.filter-bar input{width:auto;min-width:130px;font-size:13px;padding:6px 9px}
 .filter-bar .search{flex:1;min-width:200px}
-.table-wrap {
-  background: var(--pnl);
-  border-radius: var(--r);
-  border: 1px solid var(--ln);
-  overflow: hidden;
-  box-shadow: var(--sh);
-}
-table {
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-  font-size: 13.5px;
-}
-th, td {
-  padding: 14px 16px;
-  text-align: left;
-  border-bottom: 1px solid var(--ln);
-  vertical-align: middle;
-}
-th {
-  background: var(--pnl2);
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: var(--mut);
-  font-weight: 700;
-  white-space: nowrap;
-  position: sticky;
-  top: 0;
-  z-index: 1;
-  border-bottom: 2px solid var(--ln);
-}
-tr:hover td { background: var(--pnl2); }
-tr:last-child td { border-bottom: none; }
+.table-wrap{background:var(--pnl);border-radius:var(--r);border:1px solid var(--ln);overflow:auto;box-shadow:var(--sh)}
+table{width:100%;border-collapse:separate;border-spacing:0;font-size:13.5px}
+th,td{padding:12px 16px;text-align:left;border-bottom:1px solid var(--ln);vertical-align:middle}
+th{background:var(--pnl2);font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--mut);font-weight:700;white-space:nowrap;position:sticky;top:0;z-index:1;border-bottom:2px solid var(--ln);}
+tr:hover td{background:var(--pnl2)}
+tr:last-child td{border-bottom:0}
+
+.card{background:var(--pnl);padding:20px;border-radius:var(--r);border:1px solid var(--ln);box-shadow:var(--sh);margin-bottom:16px;transition:box-shadow .2s ease;}
 
 .card {
   background: var(--pnl);
