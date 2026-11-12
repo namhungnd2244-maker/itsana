@@ -3,6 +3,14 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ND2 Radiology OS V5.5</title>
+@media (max-width: 900px) {
+  .layout { grid-template-columns: 1fr !important; }
+  nav { 
+    position: fixed; inset: 0 20% 0 0; z-index: 999; 
+    transform: translateX(-102%); transition: transform 0.2s; 
+  }
+  body.nav nav { transform: none; }
+}
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root {
