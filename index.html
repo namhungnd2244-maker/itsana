@@ -4027,5 +4027,82 @@ document.addEventListener('keydown', e=>{ if(e.key==='Escape') toggleNav(false);
     setInterval(mountND2Controls, 1000);
   })();
 </script>
+  <!-- ========================================== -->
+<!-- FIX LỖI LỘ MẬT KHẨU VÀ ÉP GIAO DIỆN V6 -->
+<!-- ========================================== -->
+<style>
+  /* 1. XÓA SỔ DÒNG CHỮ LỘ MẬT KHẨU */
+  #login .hint, .login-card .hint {
+    display: none !important;
+  }
+
+  /* 2. ĐỔI MÀU NÚT ĐĂNG NHẬP SANG CHUẨN V6 */
+  #login button {
+    background-color: #0f766e !important;
+    transition: all 0.2s;
+  }
+  #login button:hover {
+    background-color: #115e59 !important;
+  }
+
+  /* 3. HIỂN THỊ NÚT SÁNG/TỐI TRÊN MÀN HÌNH LOGIN */
+  #nd2-theme-btn {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 99999;
+    background: #fff;
+    color: #1e293b;
+    border: 1px solid #e2e8f0;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  }
+
+  /* 4. CHẾ ĐỘ TỐI CHO MÀN HÌNH LOGIN */
+  body.dark-mode #login {
+    background: linear-gradient(135deg, #0f172a, #1e293b) !important;
+  }
+  body.dark-mode .login-card {
+    background: #1e293b !important;
+    border: 1px solid #334155 !important;
+  }
+  body.dark-mode .login-card h1 { color: #2dd4bf !important; }
+  body.dark-mode .login-card input {
+    background: #0f172a !important;
+    color: #fff !important;
+    border-color: #334155 !important;
+  }
+</style>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    // 1. Khôi phục chế độ Sáng/Tối
+    const savedTheme = localStorage.getItem('itsana_theme');
+    if (savedTheme === 'dark') document.body.classList.add('dark-mode');
+
+    // 2. Tạo nút Sáng/Tối
+    if (!document.getElementById('nd2-theme-btn')) {
+      const btn = document.createElement('button');
+      btn.id = 'nd2-theme-btn';
+      const updateIcon = () => {
+        btn.innerHTML = document.body.classList.contains('dark-mode') ? '☀️ Sáng' : '🌙 Tối';
+      };
+      updateIcon();
+      btn.onclick = () => {
+        const isDark = document.body.classList.toggle('dark-mode');
+        localStorage.setItem('itsana_theme', isDark ? 'dark' : 'light');
+        updateIcon();
+      };
+      document.body.appendChild(btn);
+    }
+
+    // 3. Tự động xóa dòng chữ lộ mật khẩu (đề phòng CSS không ăn)
+    const hintEl = document.querySelector('.login-card .hint');
+    if (hintEl) hintEl.style.display = 'none';
+  });
+</script>
   </body>
 </html>
