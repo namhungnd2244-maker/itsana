@@ -5,282 +5,285 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>ND2 Radiology OS V5.5</title>
 
-  <!-- Đặt thẻ <style> MỞ ở đây -->
   <style>
-   :root, body:not(.dark-mode) {
-    --bg: #f8fafc; --pnl: #ffffff; --pnl2: #f1f5f9; --ink: #0f172a; --mut: #64748b; 
-    --ln: #e2e8f0; --acc: #0f766e; --acc-hover: #115e59; --ring: rgba(15, 118, 110, 0.4);
-    --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -2px rgba(0,0,0,0.05);
-    --shadow-glass: 0 8px 32px rgba(0,0,0,0.08);
-  }
-  
-  body.dark-mode {
-    --bg: #0b1120; --pnl: #1e293b; --pnl2: #0f172a; --ink: #f8fafc; --mut: #94a3b8; 
-    --ln: #334155; --acc: #14b8a6; --acc-hover: #0d9488; --ring: rgba(20, 184, 166, 0.4);
-    --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.3);
-    --shadow-glass: 0 8px 32px rgba(0,0,0,0.4);
-  }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
 
-  /* Chuyển động vật lý mượt mà cấp độ Apple/Vercel */
-  body, header, main, .pnl, .card {
-    transition: background-color 0.4s cubic-bezier(0.4, 0, 0.2, 1), 
-                color 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-
-  /* Khóa cuộn trang khi mở menu */
-  body.no-scroll { overflow: hidden; }
-
-  /* =========================================
-     2. PREMIUM BUTTON COMPONENTS
-     ========================================= */
-  .btn-icon {
-    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-    background: var(--pnl2); color: var(--ink); 
-    border: 1px solid var(--ln); border-radius: 9999px; /* Pill shape */
-    padding: 8px 16px; font-weight: 600; font-size: 14px;
-    cursor: pointer; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-  }
-  
-  .btn-icon svg { width: 16px; height: 16px; fill: currentColor; }
-
-  /* Micro-interactions */
-  .btn-icon:hover { background: var(--ln); transform: translateY(-1px); }
-  .btn-icon:active { transform: translateY(1px); }
-  
-  /* A11y Focus State */
-  .btn-icon:focus-visible {
-    outline: none;
-    box-shadow: 0 0 0 3px var(--ring);
-  }
-
-  .btn-mobile-menu {
-    display: none; background: var(--acc); color: #fff; border: none;
-  }
-  .btn-mobile-menu:hover { background: var(--acc-hover); }
-
-  /* =========================================
-     3. RESPONSIVE & GLASSMORPHISM MENU
-     ========================================= */
-  /* Lớp phủ tối (Overlay) */
-  .mobile-overlay {
-    position: fixed; inset: 0; background: rgba(0, 0, 0, 0.4);
-    backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
-    z-index: 998; opacity: 0; pointer-events: none;
-    transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-  body.mobile-menu-open .mobile-overlay {
-    opacity: 1; pointer-events: auto;
-  }
-
-  @media (max-width: 900px) {
-    .btn-mobile-menu { display: inline-flex; }
-
-    nav { 
-      position: fixed; top: 0; bottom: 0; left: 0; width: 280px; z-index: 999; 
-      background: var(--pnl); border-right: 1px solid var(--ln);
-      box-shadow: var(--shadow-glass);
-      transform: translateX(-100%); 
-      transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1); /* Snappy in, smooth out */
-    }
-    
-    body.mobile-menu-open nav { transform: translateX(0); }
-  }
-</style>
-
-<script>
-  document.addEventListener('DOMContentLoaded', () => {
-    // Premium SVGs thay cho Emojis
-    const ICON_SUN = `<svg viewBox="0 0 24 24"><path d="M12 4V2M12 22v-2M4 12H2m22 0h-2M6.343 6.343L4.929 4.929m14.142 14.142l-1.414-1.414M6.343 17.657l-1.414 1.414M19.071 4.929l-1.414 1.414M12 17a5 5 0 100-10 5 5 0 000 10z" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>`;
-    const ICON_MOON = `<svg viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>`;
-    const ICON_MENU = `<svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>`;
-
-    // Khôi phục trạng thái Theme
-    if (localStorage.getItem('itsana_theme') === 'dark') {
-      document.body.classList.add('dark-mode');
+    /* 1. BẢNG MÀU GỐC (LIGHT MODE) */
+    :root, body:not(.dark-mode) {
+      --ink: #14211f;
+      --mut: #566864;
+      --acc: #0e5a52;       /* Teal chủ đạo */
+      --acc2: #0a3f3a;      /* Deep Teal Hover */
+      --ring: rgba(14, 90, 82, 0.3);
+      --bg: #f3f7f6;        /* Nền giấy nhạt */
+      --pnl: #ffffff;       /* Nền thẻ */
+      --pnl2: #f8fbfa;      /* Nền bảng nhạt */
+      --ln: #d3dedb;        /* Viền xanh xám */
+      --soft: #e0eeea;      /* Nền mint nhạt */
+      --good: #16a34a;
+      --goodbg: #dcfce7;
+      --warn: #d97706;
+      --warnbg: #fef3c7;
+      --bad: #dc2626;
+      --badbg: #fee2e2;
+      --sh: 0 1px 3px rgba(15, 23, 42, .06);
+      --shlg: 0 20px 40px rgba(15, 23, 42, .15);
+      --shadow-glass: 0 8px 32px rgba(0, 0, 0, 0.12);
+      --r: 10px;
     }
 
-    const header = document.querySelector('header');
-    
-    if (header) {
-      // 1. Khởi tạo Lớp phủ Mobile (Overlay) an toàn
+    /* 2. BẢNG MÀU TỐI (DARK MODE) */
+    body.dark-mode {
+      --bg: #0b1120;
+      --pnl: #1e293b;
+      --pnl2: #0f172a;
+      --ink: #f8fafc;
+      --mut: #94a3b8;
+      --ln: #334155;
+      --acc: #14b8a6;
+      --acc2: #0d9488;
+      --ring: rgba(20, 184, 166, 0.35);
+      --soft: #1e293b;
+      --good: #34d399;
+      --goodbg: #064e3b;
+      --warn: #fbbf24;
+      --warnbg: #78350f;
+      --bad: #f87171;
+      --badbg: #7f1d1d;
+      --sh: 0 1px 3px rgba(0, 0, 0, 0.3);
+      --shlg: 0 10px 25px -3px rgba(0, 0, 0, 0.5);
+      --shadow-glass: 0 8px 32px rgba(0, 0, 0, 0.45);
+    }
+
+    html, body {
+      background: var(--bg);
+      color: var(--ink);
+      font: 14px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    body, header, nav, main, .pnl, .card, table, th, td, input, select, textarea {
+      transition: background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                  color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                  border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    body.no-scroll { overflow: hidden; }
+
+    /* 3. FORM & BUTTONS HỆ THỐNG */
+    button { font: inherit; cursor: pointer; }
+    input, select, textarea {
+      font: inherit;
+      padding: 9px 12px;
+      border: 1px solid var(--ln);
+      border-radius: 6px;
+      background: var(--pnl);
+      color: var(--ink);
+      width: 100%;
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: var(--acc);
+      box-shadow: 0 0 0 3px var(--ring);
+    }
+
+    .btn {
+      background: var(--acc);
+      color: #fff;
+      border: 1px solid transparent;
+      border-radius: 6px;
+      padding: 8px 16px;
+      font-weight: 600;
+      transition: all 0.15s ease;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    }
+    .btn:hover { background: var(--acc2); box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); transform: translateY(-1px); }
+    .btn:active { transform: translateY(0); box-shadow: none; }
+
+    .btn-soft {
+      background: var(--pnl);
+      color: var(--ink);
+      border: 1px solid var(--ln);
+      border-radius: 6px;
+      padding: 8px 16px;
+      font-weight: 600;
+      transition: all 0.15s ease;
+    }
+    .btn-soft:hover { background: var(--soft); border-color: var(--mut); }
+
+    .btn-danger { background: var(--bad); color: #fff; border: 1px solid transparent; }
+    .btn-danger:hover { background: #b91c1c; }
+    .btn-sm { padding: 5px 10px; font-size: 12px; }
+    .icon-btn {
+      background: transparent;
+      border: 0;
+      padding: 4px 6px;
+      font-size: 15px;
+      border-radius: 5px;
+      transition: background 0.15s;
+    }
+
+    /* 4. CỤM NÚT SÁNG/TỐI & MENU */
+    .os-action-group {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      z-index: 1001;
+    }
+    .os-action-group.is-floating {
+      position: fixed;
+      top: 12px;
+      right: 16px;
+    }
+
+    .btn-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      background: var(--pnl2);
+      color: var(--ink);
+      border: 1px solid var(--ln);
+      border-radius: 9999px;
+      padding: 6px 14px;
+      font-weight: 600;
+      font-size: 13px;
+      transition: all 0.2s ease;
+      box-shadow: var(--sh);
+    }
+    .btn-icon svg { width: 15px; height: 15px; flex-shrink: 0; }
+    .btn-icon:hover { background: var(--soft); transform: translateY(-1px); }
+    .btn-icon:active { transform: translateY(1px); }
+    .btn-icon:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--ring); }
+
+    .btn-mobile-menu {
+      display: none;
+      background: var(--acc);
+      color: #fff;
+      border-color: var(--acc);
+    }
+    .btn-mobile-menu:hover { background: var(--acc2); }
+
+    /* 5. OVERLAY & RESPONSIVE (< 900px) */
+    .mobile-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.45);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      z-index: 998;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+    body.mobile-menu-open .mobile-overlay,
+    body.nav .mobile-overlay {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    @media (max-width: 900px) {
+      .btn-mobile-menu { display: inline-flex; }
+      .layout { grid-template-columns: 1fr !important; }
+      nav {
+        position: fixed;
+        inset: 0 auto 0 0;
+        width: 270px;
+        z-index: 999;
+        background: var(--pnl);
+        border-right: 1px solid var(--ln);
+        box-shadow: var(--shadow-glass);
+        transform: translateX(-105%);
+        transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+      }
+      body.mobile-menu-open nav,
+      body.nav nav {
+        transform: translateX(0);
+      }
+      main { padding: 10px !important; }
+      .ph { flex-direction: column; gap: 10px; }
+      .kpis { grid-template-columns: 1fr 1fr !important; }
+      .two { grid-template-columns: 1fr !important; }
+      .scroll { max-width: 100vw; overflow-x: auto; }
+    }
+  </style>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const ICON_SUN = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>`;
+      const ICON_MOON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`;
+      const ICON_MENU = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>`;
+
+      // Khôi phục trạng thái Theme (ưu tiên lựa chọn đã lưu, nếu chưa có thì theo hệ thống)
+      const savedTheme = localStorage.getItem('itsana_theme');
+      const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
+        document.body.classList.add('dark-mode');
+      }
+
+      // Tạo lớp phủ đóng menu trên mobile
       const overlay = document.createElement('div');
       overlay.className = 'mobile-overlay';
       overlay.setAttribute('aria-hidden', 'true');
       document.body.appendChild(overlay);
 
-      // 2. Nút Menu (Mobile) chuẩn a11y
+      // Tạo nút Menu
       const menuBtn = document.createElement('button');
+      menuBtn.type = 'button';
       menuBtn.className = 'btn-icon btn-mobile-menu';
-      menuBtn.innerHTML = `${ICON_MENU} <span>Menu</span>`;
+      menuBtn.innerHTML = `${ICON_MENU}<span>Menu</span>`;
       menuBtn.setAttribute('aria-label', 'Mở menu điều hướng');
       menuBtn.setAttribute('aria-expanded', 'false');
-      
+
       const toggleMenu = (forceState) => {
-        const isOpen = typeof forceState === 'boolean' 
-          ? forceState 
+        const isOpen = typeof forceState === 'boolean'
+          ? forceState
           : !document.body.classList.contains('mobile-menu-open');
-          
         document.body.classList.toggle('mobile-menu-open', isOpen);
-        document.body.classList.toggle('no-scroll', isOpen); // Khóa cuộn background
-        menuBtn.setAttribute('aria-expanded', isOpen);
+        document.body.classList.toggle('nav', isOpen);
+        document.body.classList.toggle('no-scroll', isOpen);
+        menuBtn.setAttribute('aria-expanded', String(isOpen));
       };
 
       menuBtn.addEventListener('click', () => toggleMenu());
       overlay.addEventListener('click', () => toggleMenu(false));
 
-      // 3. Nút Toggle Theme
+      // Tạo nút Sáng/Tối
       const themeBtn = document.createElement('button');
+      themeBtn.type = 'button';
       themeBtn.className = 'btn-icon';
       themeBtn.setAttribute('aria-label', 'Chuyển đổi giao diện Sáng/Tối');
-      
+
       const updateThemeUI = (isDark) => {
-        themeBtn.innerHTML = isDark ? `${ICON_SUN} Sáng` : `${ICON_MOON} Tối`;
+        themeBtn.innerHTML = isDark ? `${ICON_SUN}<span>Sáng</span>` : `${ICON_MOON}<span>Tối</span>`;
       };
-      
       updateThemeUI(document.body.classList.contains('dark-mode'));
-      
+
       themeBtn.addEventListener('click', () => {
         const isDarkNow = document.body.classList.toggle('dark-mode');
         localStorage.setItem('itsana_theme', isDarkNow ? 'dark' : 'light');
         updateThemeUI(isDarkNow);
       });
 
-      // 4. Bơm vào Header (Tạo wrapper để layout không bị vỡ)
+      // Chèn vào Header hoặc tự động ghim góc phải nếu chưa có thẻ Header
       const actionGroup = document.createElement('div');
-      actionGroup.style.cssText = 'display: flex; gap: 12px; align-items: center; margin-right: 12px;';
+      actionGroup.className = 'os-action-group';
       actionGroup.appendChild(menuBtn);
       actionGroup.appendChild(themeBtn);
-      
-      header.prepend(actionGroup);
-    }
-  });
-    @media (max-width: 900px) {
-      .layout { grid-template-columns: 1fr !important; }
-      nav { 
-        position: fixed; inset: 0 20% 0 0; z-index: 999; 
-        transform: translateX(-102%); transition: transform 0.2s; 
-      }
-      body.nav nav { transform: none; }
-    }
-    
-  </style> <!-- Bắt buộc phải có thẻ ĐÓNG ở đây -->
 
+      const headerTarget = document.querySelector('header, .header, .topbar, .ph');
+      if (headerTarget) {
+        headerTarget.prepend(actionGroup);
+      } else {
+        actionGroup.classList.add('is-floating');
+        document.body.appendChild(actionGroup);
+      }
+    });
+  </script>
 </head>
 <body>
-  <!-- Nội dung trang web của bạn -->
-<style>
-  
-*{box-sizing:border-box;margin:0;padding:0}
-:root {
-  /* Bảng màu từ HR App */
-  --ink: #14211f;
-  --mut: #566864;
-  --acc: #0e5a52;      /* Teal (Màu chủ đạo) */
-  --acc2: #0a3f3a;     /* Deep Teal (Hover) */
-  --bg: #f3f7f6;       /* Nền giấy nhạt */
-  --pnl: #ffffff;      /* Nền thẻ */
-  --pnl2: #f8fbfa;     /* Nền bảng nhạt */
-  --ln: #d3dedb;       /* Viền xanh xám */
-  --soft: #e0eeea;     /* Nền mint nhạt */
-  --good: #16a34a;
-  --goodbg: #dcfce7;
-  --warn: #d97706;
-  --warnbg: #fef3c7;
-  --bad: #dc2626;
-  --badbg: #fee2e2;
-  --sh: 0 1px 3px rgba(15,23,42,.06);
-  --shlg: 0 20px 40px rgba(15,23,42,.15);
-  --r: 10px;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0b1120;
-    --pnl: #1e293b;
-    --pnl2: #0f172a;
-    --ink: #f8fafc;
-    --mut: #94a3b8;
-    --ln: #334155;
-    --acc: #14b8a6;
-    --acc2: #0d9488;
-    --soft: #1e293b;
-    --sh: 0 1px 3px rgba(0,0,0,0.3);
-    --shlg: 0 10px 25px -3px rgba(0,0,0,0.5);
-  }
-}
-
-html,body {
-  background: var(--bg);
-  color: var(--ink);
-  font: 14px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-button{font:inherit;cursor:pointer}
-input, select, textarea {
-  font: inherit;
-  padding: 9px 12px;
-  border: 1px solid var(--ln);
-  border-radius: 6px;
-  background: var(--pnl);
-  color: var(--ink);
-  width: 100%;
-  transition: border-color 0.2s, box-shadow 0.2s;
-}
-input:focus, select:focus, textarea:focus {
-  outline: none;
-  border-color: var(--acc);
-  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.15); /* Viền sáng Teal */
-}
-.btn {
-  background: var(--acc);
-  color: #fff;
-  border: 1px solid transparent;
-  border-radius: 6px;
-  padding: 8px 16px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-}
-.btn:hover {
-  background: var(--acc2);
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  transform: translateY(-1px);
-}
-.btn:active {
-  transform: translateY(0);
-  box-shadow: none;
-}
-.btn-soft {
-  background: var(--pnl);
-  color: var(--ink);
-  border: 1px solid var(--ln);
-  border-radius: 6px;
-  padding: 8px 16px;
-  font-weight: 600;
-  transition: all 0.15s ease;
-}
-.btn-soft:hover {
-  background: var(--soft);
-  border-color: var(--mut);
-}
-.btn-danger {
-  background: var(--bad);
-  color: #fff;
-  border: 1px solid transparent;
-}
-.btn-danger:hover { background: #dc2626; }
-.btn-sm { padding: 5px 10px; font-size: 12px; }
-.icon-btn {
-  background: transparent;
-  border: 0;
-  padding: 4px 6px;
-  font-size: 15px;
-  border-radius: 5px;
-  transition: background 0.15s;
-}
+  <!-- Giữ nguyên toàn bộ phần HTML bên dưới của bạn (xóa thẻ <style> thừa ngay dưới <body> nếu còn) -->
 .icon-btn:hover { background: var(--soft); }
 #login{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#0b1220,#1e3a8a)}
 .login-card{background:#fff;padding:36px 32px;border-radius:16px;width:100%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,.4)}
