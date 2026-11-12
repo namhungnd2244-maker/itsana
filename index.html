@@ -4,204 +4,165 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>ND2 Radiology OS V5.5</title>
-  <style>
-  /* 1. BẢNG MÀU LIGHT / DARK MODE */
+<!-- ========================================== -->
+<!-- ITSANA V6 - TỐI ƯU GIAO DIỆN SÁNG/TỐI & MOBILE -->
+<!-- ========================================== -->
+<style>
+  /* 1. HỆ BIẾN MÀU CHUẨN (LIGHT / DARK) */
   :root, body:not(.dark-mode) {
-    --bg: #f3f7f6; --pnl: #ffffff; --pnl2: #f8fbfa;
-    --ink: #14211f; --mut: #566864; --ln: #d3dedb;
-    --acc: #0e5a52; --acc2: #0a3f3a; --soft: #e0eeea;
-    --ring: rgba(14, 90, 82, 0.35);
-    --sh: 0 1px 3px rgba(15, 23, 42, 0.06);
-    --shadow-glass: 0 8px 32px rgba(0, 0, 0, 0.16);
+    --bg-base: #f4f7f6; 
+    --bg-surface: #ffffff; 
+    --bg-hover: #f8fafc;
+    --text-main: #1e293b; 
+    --text-muted: #64748b; 
+    --border: #e2e8f0;
+    --primary: #0f766e; 
+    --primary-hover: #115e59;
   }
 
   body.dark-mode {
-    --bg: #0b1120; --pnl: #1e293b; --pnl2: #0f172a;
-    --ink: #f8fafc; --mut: #94a3b8; --ln: #334155;
-    --acc: #14b8a6; --acc2: #0d9488; --soft: #1e293b;
-    --ring: rgba(20, 184, 166, 0.4);
-    --sh: 0 1px 3px rgba(0, 0, 0, 0.35);
-    --shadow-glass: 0 8px 32px rgba(0, 0, 0, 0.5);
+    --bg-base: #0b1120 !important; 
+    --bg-surface: #1e293b !important; 
+    --bg-hover: #0f172a !important;
+    --text-main: #f1f5f9 !important; 
+    --text-muted: #cbd5e1 !important; 
+    --border: #334155 !important;
+    --primary: #2dd4bf !important; 
+    --primary-hover: #14b8a6 !important;
   }
 
-  body, nav, main, .pnl, .card, .kpi, table, th, td, input, select, textarea {
-    transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease;
+  /* 2. ÉP TOÀN BỘ KHUNG TRẮNG SANG NỀN TỐI (Dùng CSS, không dùng JS lag máy) */
+  body.dark-mode, body.dark-mode .layout, body.dark-mode main, body.dark-mode #app {
+    background-color: var(--bg-base) !important;
+    color: var(--text-main) !important;
   }
-  body.no-scroll { overflow: hidden; }
 
-  /* 2. CỤM NÚT NẰM CHÍNH GIỮA THANH TOPBAR XANH NAVY */
-  #nd2-os-controls {
+  /* Quét các class chứa khung trắng của V5.5 */
+  body.dark-mode .card,
+  body.dark-mode .tile,
+  body.dark-mode .panel,
+  body.dark-mode .table-wrap,
+  body.dark-mode .kpi,
+  body.dark-mode .unit,
+  body.dark-mode nav,
+  body.dark-mode header.top,
+  body.dark-mode dialog,
+  body.dark-mode .filter-bar,
+  body.dark-mode .cal-cell {
+    background-color: var(--bg-surface) !important;
+    color: var(--text-main) !important;
+    border-color: var(--border) !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3) !important;
+  }
+
+  /* Bảng biểu */
+  body.dark-mode table th { background-color: var(--bg-hover) !important; color: var(--text-muted) !important; }
+  body.dark-mode table td { border-bottom-color: var(--border) !important; color: var(--text-main) !important; }
+  body.dark-mode tr:hover td { background-color: var(--bg-hover) !important; }
+
+  /* Ô nhập liệu */
+  body.dark-mode input, body.dark-mode select, body.dark-mode textarea {
+    background-color: var(--bg-base) !important;
+    color: var(--text-main) !important;
+    border-color: var(--border) !important;
+  }
+
+  /* Nút phụ */
+  body.dark-mode .btn-soft { background-color: var(--bg-surface) !important; color: var(--text-main) !important; border-color: var(--border) !important; }
+  body.dark-mode .btn-soft:hover { background-color: var(--bg-hover) !important; }
+  body.dark-mode .nav-item:hover { background-color: var(--bg-hover) !important; }
+  body.dark-mode .nav-item.on { background-color: rgba(45, 212, 191, 0.15) !important; color: var(--primary) !important; }
+
+  /* 3. NÚT CHUYỂN SÁNG / TỐI (FLOATING BUTTON) */
+  #nd2-theme-btn {
     position: fixed;
-    top: 9px;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 2147483647;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .nd2-pill-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    height: 30px;
-    padding: 0 13px;
-    border-radius: 9999px;
-    font-size: 12.5px;
+    top: 12px;
+    right: 16px;
+    z-index: 99999;
+    background: var(--bg-surface);
+    color: var(--text-main);
+    border: 1px solid var(--border);
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 13px;
     font-weight: 600;
     cursor: pointer;
-    white-space: nowrap;
-    color: #ffffff;
-    background: rgba(255, 255, 255, 0.13);
-    border: 1px solid rgba(255, 255, 255, 0.25);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    display: flex;
+    align-items: center;
+    gap: 6px;
     transition: all 0.2s ease;
   }
-  .nd2-pill-btn svg { width: 14px; height: 14px; flex-shrink: 0; }
-  .nd2-pill-btn:hover {
-    background: rgba(255, 255, 255, 0.24);
-    transform: translateY(-1px);
-  }
-  .nd2-pill-btn:active { transform: translateY(0); }
-  .nd2-pill-btn:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--ring); }
+  #nd2-theme-btn:hover { transform: scale(1.05); }
 
-  /* Nút Menu chỉ hiện trên màn hình nhỏ <= 900px */
-  #nd2-menu-btn {
-    display: none;
-    background: #0d9488;
-    border-color: #14b8a6;
-  }
-  #nd2-menu-btn:hover { background: #0f766e; }
-
-  /* 3. LỚP PHỦ & RESPONSIVE MOBILE (<= 900px) */
-  .nd2-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(15, 23, 42, 0.45);
-    backdrop-filter: blur(3px);
-    -webkit-backdrop-filter: blur(3px);
-    z-index: 998;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.25s ease;
-  }
-  body.mobile-menu-open .nd2-overlay,
-  body.nav .nd2-overlay {
-    opacity: 1;
-    pointer-events: auto;
-  }
-
+  /* Trên điện thoại: Đặt ở góc phải trên cùng, không đè nút Menu */
   @media (max-width: 900px) {
-    #nd2-menu-btn { display: inline-flex; }
+    #nd2-theme-btn { top: 14px; right: 14px; padding: 6px 10px; font-size: 12px; }
+    
+    /* Fix lỗi vỡ layout trên mobile */
     .layout { grid-template-columns: 1fr !important; }
-    nav {
-      position: fixed;
-      inset: 0 auto 0 0;
-      width: 265px;
-      z-index: 999;
-      background: var(--pnl);
-      border-right: 1px solid var(--ln);
-      box-shadow: var(--shadow-glass);
-      transform: translateX(-105%);
-      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    nav { 
+      position: fixed; inset: 0 25% 0 0; z-index: 999; 
+      transform: translateX(-105%); transition: transform 0.3s ease; 
     }
-    body.mobile-menu-open nav,
-    body.nav nav {
-      transform: translateX(0);
-    }
-    main { padding: 10px !important; }
-    .ph { flex-direction: column; gap: 10px; }
+    body.mobile-menu-open nav { transform: translateX(0); }
+    main { padding: 10px !important; padding-top: 60px !important; }
     .kpis { grid-template-columns: 1fr 1fr !important; }
     .two { grid-template-columns: 1fr !important; }
-    .scroll { max-width: 100vw; overflow-x: auto; }
-  }
-
-  @media (max-width: 560px) {
-    #nd2-os-controls { top: 52px; }
-    .nd2-pill-btn {
-      background: var(--pnl);
-      color: var(--ink);
-      border-color: var(--ln);
-      box-shadow: var(--sh);
-    }
-    #nd2-menu-btn { color: #fff; }
   }
 </style>
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      const ICON_SUN = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>`;
-      const ICON_MOON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`;
-      const ICON_MENU = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>`;
 
-      // Khôi phục trạng thái Theme (ưu tiên lựa chọn đã lưu, nếu chưa có thì theo hệ thống)
-      const savedTheme = localStorage.getItem('itsana_theme');
-      const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-      if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
-        document.body.classList.add('dark-mode');
-      }
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  // 1. Khôi phục chế độ đã lưu
+  const savedTheme = localStorage.getItem('itsana_theme');
+  if (savedTheme === 'dark') {
+    document.body.classList.add('dark-mode');
+  }
 
-      // Tạo lớp phủ đóng menu trên mobile
-      const overlay = document.createElement('div');
-      overlay.className = 'mobile-overlay';
-      overlay.setAttribute('aria-hidden', 'true');
-      document.body.appendChild(overlay);
+  // 2. Tạo nút Sáng/Tối Nổi
+  if (!document.getElementById('nd2-theme-btn')) {
+    const btn = document.createElement('button');
+    btn.id = 'nd2-theme-btn';
+    
+    // Hàm cập nhật Icon
+    const updateIcon = () => {
+      const isDark = document.body.classList.contains('dark-mode');
+      btn.innerHTML = isDark ? '☀️ Sáng' : '🌙 Tối';
+    };
+    updateIcon();
 
-      // Tạo nút Menu
+    // Sự kiện Click
+    btn.onclick = () => {
+      const isDark = document.body.classList.toggle('dark-mode');
+      localStorage.setItem('itsana_theme', isDark ? 'dark' : 'light');
+      updateIcon();
+    };
+
+    document.body.appendChild(btn);
+  }
+
+  // 3. Xử lý Menu Mobile (Dành cho màn hình nhỏ)
+  if (window.innerWidth <= 900) {
+    const header = document.querySelector('header.top');
+    if(header && !document.getElementById('mobile-menu-btn')) {
       const menuBtn = document.createElement('button');
-      menuBtn.type = 'button';
-      menuBtn.className = 'btn-icon btn-mobile-menu';
-      menuBtn.innerHTML = `${ICON_MENU}<span>Menu</span>`;
-      menuBtn.setAttribute('aria-label', 'Mở menu điều hướng');
-      menuBtn.setAttribute('aria-expanded', 'false');
-
-      const toggleMenu = (forceState) => {
-        const isOpen = typeof forceState === 'boolean'
-          ? forceState
-          : !document.body.classList.contains('mobile-menu-open');
-        document.body.classList.toggle('mobile-menu-open', isOpen);
-        document.body.classList.toggle('nav', isOpen);
-        document.body.classList.toggle('no-scroll', isOpen);
-        menuBtn.setAttribute('aria-expanded', String(isOpen));
-      };
-
-      menuBtn.addEventListener('click', () => toggleMenu());
-      overlay.addEventListener('click', () => toggleMenu(false));
-
-      // Tạo nút Sáng/Tối
-      const themeBtn = document.createElement('button');
-      themeBtn.type = 'button';
-      themeBtn.className = 'btn-icon';
-      themeBtn.setAttribute('aria-label', 'Chuyển đổi giao diện Sáng/Tối');
-
-      const updateThemeUI = (isDark) => {
-        themeBtn.innerHTML = isDark ? `${ICON_SUN}<span>Sáng</span>` : `${ICON_MOON}<span>Tối</span>`;
-      };
-      updateThemeUI(document.body.classList.contains('dark-mode'));
-
-      themeBtn.addEventListener('click', () => {
-        const isDarkNow = document.body.classList.toggle('dark-mode');
-        localStorage.setItem('itsana_theme', isDarkNow ? 'dark' : 'light');
-        updateThemeUI(isDarkNow);
-      });
-
-      // Chèn vào Header hoặc tự động ghim góc phải nếu chưa có thẻ Header
-      const actionGroup = document.createElement('div');
-      actionGroup.className = 'os-action-group';
-      actionGroup.appendChild(menuBtn);
-      actionGroup.appendChild(themeBtn);
-
-      const headerTarget = document.querySelector('header, .header, .topbar, .ph');
-      if (headerTarget) {
-        headerTarget.prepend(actionGroup);
-      } else {
-        actionGroup.classList.add('is-floating');
-        document.body.appendChild(actionGroup);
-      }
-    });
-  </script>
+      menuBtn.id = 'mobile-menu-btn';
+      menuBtn.innerHTML = '☰';
+      menuBtn.style.cssText = 'background:var(--primary); color:white; border:none; padding:6px 12px; border-radius:6px; font-weight:bold; cursor:pointer; font-size:16px; margin-right:10px;';
+      
+      // Chèn nút Menu vào trước tiêu đề
+      header.insertBefore(menuBtn, header.firstChild);
+      
+      // Bật tắt menu
+      menuBtn.onclick = () => document.body.classList.toggle('mobile-menu-open');
+      
+      // Bấm ra ngoài tự đóng
+      document.querySelector('main').onclick = () => document.body.classList.remove('mobile-menu-open');
+    }
+  }
+});
+</script>
 </head>
 <body>
   <!-- Giữ nguyên toàn bộ phần HTML bên dưới của bạn (xóa thẻ <style> thừa ngay dưới <body> nếu còn) -->
